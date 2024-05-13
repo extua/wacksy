@@ -1,13 +1,15 @@
 use core::error::Error;
 use std::{fs, path::Path};
-use wacksy::{DataPackage, Wacz, compose_datapackage, compose_index, zip_dir};
+use wacksy::{DataPackage, Wacz, compose_datapackage, indexer::CDXJIndex, zip_dir};
 
 fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let warc_file_path: &Path = Path::new("examples/rec-e7e68da067d0-20250423121042981-0.warc.gz");
 
     let warc_file = fs::read(warc_file_path)?;
 
-    let index_bytes = compose_index(warc_file_path)?;
+    let index = CDXJIndex::new(warc_file_path)?;
+
+    let index_bytes = index.to_string().into_bytes();
 
     let data_package = compose_datapackage(&warc_file, &index_bytes);
     let data_package_digest = DataPackage::digest(&data_package)?;
@@ -27,6 +29,6 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     // This needs to be parsed into a file!
     let wacz_data: Vec<u8> = zip_dir(&wacz_object).unwrap();
     let path: &Path = Path::new("wacz_example.wacz");
-    fs::write(path, wacz_data)?;
+    // fs::write(path, wacz_data)?;
     Ok(())
 }
