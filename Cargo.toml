@@ -2,5 +2,10 @@
 name = "wacksy"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.84"
+license = "MIT"
+authors = ["Pierre Marshall <pierre.marshall@bodleian.ox.ac.uk>"]
+repository = "https://github.com/extua/wacksy"
+description = "Experimental library for writing WACZ achives."
 
 [dependencies]
