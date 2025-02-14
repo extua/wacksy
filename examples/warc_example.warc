@@ -1,0 +1,9 @@
+WARC/1.0
+warc-record-id: <urn:uuid:7a5ecb92-9a02-43ac-bcc7-d8c238dd52dc>
+content-length: 54
+warc-type: warcinfo
+warc-ip-address: 127.0.0.1
+warc-date: 2025-02-14T11:23:30Z
+
+wrote to the file on 2025-02-14 11:23:30.788238701 UTC
+
