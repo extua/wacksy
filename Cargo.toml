@@ -9,5 +9,4 @@ repository = "https://github.com/extua/wacksy"
 description = "Experimental library for writing WACZ achives."
 
 [dependencies]
-walkdir = "2.5.0"
-zip = "2.2.2"
+rawzip = "0.0.7"
