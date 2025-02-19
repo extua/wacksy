@@ -1,7 +1,7 @@
 use rawzip::{CompressionMethod, RawZipWriter, ZipArchiveWriter, ZipEntryOptions};
 use std::{fs::File, io::Write};
 
-pub fn zip_dir(wacz_file: File) {
+pub fn zip_dir(wacz_file: File, warc_file: &[u8]) {
     let mut writer = ZipArchiveWriter::new(wacz_file);
     writer.new_dir("archive/").unwrap();
     writer.new_dir("indexes/").unwrap();
@@ -9,16 +9,16 @@ pub fn zip_dir(wacz_file: File) {
 
     let options = ZipEntryOptions::default().compression_method(CompressionMethod::Store);
 
-    let mut warc_file = writer.new_file("archive/data.warc", options).unwrap();
+    let mut warc_file_pointer = writer.new_file("archive/data.warc", options).unwrap();
 
     let output = {
-        let mut warc_file_writer = RawZipWriter::new(&mut warc_file);
+        let mut warc_file_writer = RawZipWriter::new(&mut warc_file_pointer);
 
-        warc_file_writer.write_all(b"Hello, world!").unwrap();
+        warc_file_writer.write_all(warc_file).unwrap();
         let (_, output) = warc_file_writer.finish().unwrap();
         output
     };
 
-    warc_file.finish(output).unwrap();
+    warc_file_pointer.finish(output).unwrap();
     writer.finish().unwrap();
 }
