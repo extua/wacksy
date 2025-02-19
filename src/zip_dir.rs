@@ -1,20 +1,24 @@
+use rawzip::{CompressionMethod, RawZipWriter, ZipArchiveWriter, ZipEntryOptions};
 use std::{fs::File, io::Write};
 
-fn main() {
-    let buffer = File::create("foo.zip").expect("couldn't create file");
-    let mut writer = rawzip::ZipArchiveWriter::new(buffer);
-    writer.new_dir("dir/").unwrap();
+pub fn zip_dir(wacz_file: File) {
+    let mut writer = ZipArchiveWriter::new(wacz_file);
+    writer.new_dir("archive/").unwrap();
+    writer.new_dir("indexes/").unwrap();
+    writer.new_dir("pages/").unwrap();
 
-    let options =
-        rawzip::ZipEntryOptions::default().compression_method(rawzip::CompressionMethod::Store);
+    let options = ZipEntryOptions::default().compression_method(CompressionMethod::Store);
 
-    let mut file = writer.new_file("dir/test.txt", options).unwrap();
+    let mut warc_file = writer.new_file("archive/data.warc", options).unwrap();
+
     let output = {
-        let mut writer = rawzip::RawZipWriter::new(&mut file);
-        writer.write_all(b"Hello, world!").unwrap();
-        let (_, output) = writer.finish().unwrap();
+        let mut warc_file_writer = RawZipWriter::new(&mut warc_file);
+
+        warc_file_writer.write_all(b"Hello, world!").unwrap();
+        let (_, output) = warc_file_writer.finish().unwrap();
         output
     };
-    file.finish(output).unwrap();
+
+    warc_file.finish(output).unwrap();
     writer.finish().unwrap();
 }
