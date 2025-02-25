@@ -1,8 +1,9 @@
-use std::{fs, fs::File};
+use std::{fs, path::Path};
 use wacksy::zip_dir;
 
 fn main() {
-    let wacz_file = File::create("foo.zip").unwrap();
     let warc_file = fs::read("examples/warc_example.warc").unwrap();
-    zip_dir(wacz_file, &warc_file);
+    let wacz_data = zip_dir(&warc_file).unwrap();
+    let path: &Path = Path::new("wacz_example.wacz");
+    fs::write(path, wacz_data).unwrap();
 }
