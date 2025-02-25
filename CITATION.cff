@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+title: Wacksy
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Marshall
+    family-names: Pierre
+    email: pierre.marshall@bodleian.ox.ac.uk
+    affiliation: Oxford University
+    orcid: 'https://orcid.org/0000-0001-9245-7670'
+repository-code: 'https://github.com/extua/wacksy'
+abstract: 'An experimental library for reading and writing WACZ files.'
+keywords:
+  - wacz
+  - warc
+  - archive
+license: MIT
+version: 0.1.0
+# date-released: 2025-03-11
