@@ -1,8 +1,8 @@
 use std::{fs, path::Path};
-use wacksy::{zip_dir, Wacz};
+use wacksy::{Wacz, zip_dir};
 
 fn main() {
-    let wacz_object: Wacz= {
+    let wacz_object: Wacz = {
         let warc_file = fs::read("examples/warc_example.warc").unwrap();
         Wacz { warc_file }
     };
