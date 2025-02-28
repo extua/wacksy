@@ -1,6 +1,9 @@
 use rawzip::{CompressionMethod, Error, RawZipWriter, ZipArchiveWriter, ZipEntryOptions};
+use crate::Wacz;
 
-pub fn zip_dir(warc_file: &[u8]) -> Result<Vec<u8>, Error> {
+// this function should accept a... struct, with a warc file,
+// which is a stream of bytes, and some other things, also streams of bytes
+pub fn zip_dir(wacz_object: &Wacz) -> Result<Vec<u8>, Error> {
     // Create a new Zip archive in memory.
     let mut output = Vec::new();
     let mut archive = ZipArchiveWriter::new(&mut output);
@@ -37,7 +40,7 @@ pub fn zip_dir(warc_file: &[u8]) -> Result<Vec<u8>, Error> {
 
     let file_path: &str = "archive/data.warc";
 
-    add_file_to_archive(&mut archive, options, warc_file, file_path);
+    add_file_to_archive(&mut archive, options, &wacz_object.warc_file, file_path);
 
     // Finish the archive, which will write the central directory.
     archive.finish()?;
