@@ -51,7 +51,6 @@ jobs:
         with:
           python-version: '3.13'
           cache: 'pip'
-      - run: echo 'wacz==0.5.0' > requirements.txt
       - run: pip install -r requirements.txt
 
       - name: Validate wacz file with py-wacz
