@@ -49,8 +49,9 @@ jobs:
       - name: Setup py-wacz
         uses: actions/setup-python@v5
         with:
+          python-version: '3.13'
           cache: 'pip'
       - run: pip install wacz
 
       - name: Validate wacz file with py-wacz
-        run: wacz validate wacz_example.wacz
+        run: wacz validate -f wacz_example.wacz
