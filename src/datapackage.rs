@@ -27,8 +27,8 @@ pub struct DataPackageResource {
 impl DataPackage {
     pub fn new(resources: Vec<DataPackageResource>) -> Self {
         let data_package = DataPackage {
-            profile: WACZ_VERSION.to_owned(),
-            wacz_version: "1.1.1".to_owned(),
+            profile: "data-package".to_owned(),
+            wacz_version: WACZ_VERSION.to_owned(),
             resources: resources,
         };
         data_package
