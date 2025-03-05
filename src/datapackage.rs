@@ -3,6 +3,8 @@ use std::path::{self, Path};
 use serde::{Deserialize, Serialize};
 use serde_json;
 
+use crate::WACZ_VERSION;
+
 // Link to the spec
 // https://specs.webrecorder.net/wacz/1.1.1/#datapackage-json
 
@@ -25,7 +27,7 @@ pub struct DataPackageResource {
 impl DataPackage {
     pub fn new(resources: Vec<DataPackageResource>) -> Self {
         let data_package = DataPackage {
-            profile: "data-package".to_owned(),
+            profile: WACZ_VERSION.to_owned(),
             wacz_version: "1.1.1".to_owned(),
             resources: resources,
         };
