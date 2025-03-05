@@ -1,5 +1,5 @@
 use crate::Wacz;
-use rawzip::{CompressionMethod, Error, RawZipWriter, ZipArchiveWriter, ZipEntryOptions};
+use rawzip::{CompressionMethod, Error, ZipDataWriter, ZipArchiveWriter, ZipEntryOptions};
 
 // this function should accept a... struct, with a warc file,
 // which is a stream of bytes, and some other things, also streams of bytes
@@ -20,9 +20,9 @@ pub fn zip_dir(wacz_object: &Wacz) -> Result<Vec<u8>, Error> {
         // Start a new file in our zip archive.
         let mut file = archive.new_file(file_path, options).unwrap();
 
-        // Wrap the file in a RawZipWriter, which will track information for the
+        // Wrap the file in a ZipDataWriter, which will track information for the
         // Zip data descriptor (like uncompressed size and crc).
-        let mut writer = RawZipWriter::new(&mut file);
+        let mut writer = ZipDataWriter::new(&mut file);
 
         // Copy the data to the writer.
         std::io::copy(&mut &file_data[..], &mut writer).unwrap();

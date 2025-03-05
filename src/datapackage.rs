@@ -1,5 +1,4 @@
-use std::path::{self, Path};
-// use base64ct::{Base64, Encoding};
+use std::path::Path;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use sha2::{Digest, Sha256};
@@ -62,6 +61,8 @@ impl DataPackageResource {
 }
 
 pub fn create_datapackage(warc_file: &Vec<u8>) -> Vec<u8> {
+
+    // this can be a loop
     let path: &Path = Path::new("archive/data.warc");
     let resource = DataPackageResource::new(path, warc_file.to_vec());
 
