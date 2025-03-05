@@ -17,7 +17,7 @@ pub struct DataPackageResource {
     pub name: String,
     pub path: String,
     pub hash: String,
-    pub bytes: i64,
+    pub bytes: usize,
 }
 
 impl DataPackage {
