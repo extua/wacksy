@@ -1,5 +1,5 @@
 use std::path::{self, Path};
-use base64ct::{Base64, Encoding};
+// use base64ct::{Base64, Encoding};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use sha2::{Digest, Sha256};
@@ -21,7 +21,7 @@ pub struct DataPackage {
 pub struct DataPackageResource {
     pub name: String,
     pub path: String,
-    // pub hash: String,
+    pub hash: String,
     pub bytes: usize,
 }
 
@@ -48,21 +48,13 @@ impl DataPackageResource {
         // create a sha256 hash, from documentation
         // here https://docs.rs/sha2/latest/sha2/
         // create a Sha256 object
-        let mut hasher = Sha256::new();
-
-        // write input
-        // hasher.update(file_bytes);
-        hasher.update(b"hello world");
-
-        // read hash digest and consume hasher
-        let hash_result = hasher.finalize();
-
-        // println!("hash result is {hash_result_string:?}");
-
+        let file_hash = Sha256::digest(&file_bytes);
+        let file_hash_formatted = format!("sha256:{file_hash:x}");
+        
         let resource = DataPackageResource {
             name: file_name,
             path,
-            // hash: hash_result_string,
+            hash: file_hash_formatted,
             bytes: file_bytes.len()
         };
         resource
