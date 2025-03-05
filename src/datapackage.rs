@@ -1,3 +1,5 @@
+use std::path::{self, Path};
+
 use serde::{Deserialize, Serialize};
 use serde_json;
 
@@ -15,24 +17,46 @@ pub struct DataPackage {
 #[derive(Serialize, Deserialize)]
 pub struct DataPackageResource {
     pub name: String,
-    pub path: String,
-    pub hash: String,
-    pub bytes: usize,
+    // pub path: String,
+    // pub hash: String,
+    // pub bytes: usize,
 }
 
 impl DataPackage {
-    pub fn new() -> Self {
+    pub fn new(resources: Vec<DataPackageResource>) -> Self {
         let data_package = DataPackage {
             profile: "data-package".to_owned(),
             wacz_version: "1.1.1".to_owned(),
-            resources: Vec::new(),
+            resources: resources,
         };
         data_package
     }
 }
 
-pub fn create_datapackage() -> Vec<u8> {
-    let data_package = DataPackage::new();
+impl DataPackageResource {
+    pub fn new(path: &Path, file_bytes: Vec<u8>) -> Self {
+        // to build this we give it a path and some bytes to read?
+
+        let resource = DataPackageResource {
+            // something really needs to be done about this
+            // horrible chain of things going on here
+            name: path.file_name().unwrap().to_str().unwrap().to_owned(),
+            // path: todo!(),
+            // hash: todo!(),
+            // bytes: todo!(),
+        };
+        resource
+    }
+}
+
+pub fn create_datapackage(warc_file: &Vec<u8>) -> Vec<u8> {
+    let path: &Path = Path::new("archive/data.warc");
+    let resource = DataPackageResource::new(path, warc_file.to_vec());
+
+    let mut resources = Vec::with_capacity(1);
+    resources.push(resource);
+
+    let data_package = DataPackage::new(resources);
 
     // Serialize it to JSON byte array
     let data_package_bytes: Vec<u8> = serde_json::to_vec(&data_package).unwrap();

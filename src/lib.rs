@@ -5,4 +5,5 @@ pub use datapackage::*;
 
 pub struct Wacz {
     pub warc_file: Vec<u8>,
+    pub data_package: Vec<u8>,
 }

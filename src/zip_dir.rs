@@ -38,11 +38,20 @@ pub fn zip_dir(wacz_object: &Wacz) -> Result<Vec<u8>, Error> {
         file.finish(descriptor).unwrap();
     }
 
-    let file_path: &str = "archive/data.warc";
-
     // this should be an iterator?
     // iterate over everything in the struct and add it recursively
-    add_file_to_archive(&mut archive, options, &wacz_object.warc_file, file_path);
+    add_file_to_archive(
+        &mut archive,
+        options,
+        &wacz_object.warc_file,
+        "archive/data.warc",
+    );
+    add_file_to_archive(
+        &mut archive,
+        options,
+        &wacz_object.data_package,
+        "datapackage.json",
+    );
 
     // Finish the archive, which will write the central directory.
     archive.finish()?;
