@@ -1,7 +1,8 @@
 use std::path::{self, Path};
-
+use base64ct::{Base64, Encoding};
 use serde::{Deserialize, Serialize};
 use serde_json;
+use sha2::{Digest, Sha256};
 
 use crate::WACZ_VERSION;
 
@@ -19,9 +20,9 @@ pub struct DataPackage {
 #[derive(Serialize, Deserialize)]
 pub struct DataPackageResource {
     pub name: String,
-    // pub path: String,
+    pub path: String,
     // pub hash: String,
-    // pub bytes: usize,
+    pub bytes: usize,
 }
 
 impl DataPackage {
@@ -39,13 +40,30 @@ impl DataPackageResource {
     pub fn new(path: &Path, file_bytes: Vec<u8>) -> Self {
         // to build this we give it a path and some bytes to read?
 
+        // something really needs to be done about this
+        // horrible chain of things going on here
+        let file_name = path.file_name().unwrap().to_str().unwrap().to_owned();
+        let path = path.to_str().unwrap().to_owned();
+
+        // create a sha256 hash, from documentation
+        // here https://docs.rs/sha2/latest/sha2/
+        // create a Sha256 object
+        let mut hasher = Sha256::new();
+
+        // write input
+        // hasher.update(file_bytes);
+        hasher.update(b"hello world");
+
+        // read hash digest and consume hasher
+        let hash_result = hasher.finalize();
+
+        // println!("hash result is {hash_result_string:?}");
+
         let resource = DataPackageResource {
-            // something really needs to be done about this
-            // horrible chain of things going on here
-            name: path.file_name().unwrap().to_str().unwrap().to_owned(),
-            // path: todo!(),
-            // hash: todo!(),
-            // bytes: todo!(),
+            name: file_name,
+            path,
+            // hash: hash_result_string,
+            bytes: file_bytes.len()
         };
         resource
     }
