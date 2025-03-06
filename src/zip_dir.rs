@@ -1,5 +1,5 @@
 use crate::Wacz;
-use rawzip::{CompressionMethod, Error, ZipDataWriter, ZipArchiveWriter, ZipEntryOptions};
+use rawzip::{CompressionMethod, Error, ZipArchiveWriter, ZipDataWriter, ZipEntryOptions};
 
 // this function should accept a... struct, with a warc file,
 // which is a stream of bytes, and some other things, also streams of bytes
