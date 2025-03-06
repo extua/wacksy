@@ -8,4 +8,5 @@ const WACZ_VERSION: &str = "1.1.1";
 pub struct Wacz {
     pub warc_file: Vec<u8>,
     pub data_package: Vec<u8>,
+    pub data_package_digest_bytes: Vec<u8>,
 }

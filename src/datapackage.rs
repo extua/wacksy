@@ -11,7 +11,6 @@ use crate::WACZ_VERSION;
 #[derive(Serialize, Deserialize)]
 pub struct DataPackage {
     pub profile: String,
-    #[serde(rename = "wacz_version")]
     pub wacz_version: String,
     pub resources: Vec<DataPackageResource>,
 }
@@ -24,6 +23,12 @@ pub struct DataPackageResource {
     pub bytes: usize,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct DataPackageDigest {
+    pub path: String,
+    pub hash: String,
+}
+
 impl DataPackage {
     pub fn new(resources: Vec<DataPackageResource>) -> Self {
         DataPackage {
@@ -32,12 +37,7 @@ impl DataPackage {
             resources,
         }
     }
-}
-
-impl DataPackageResource {
-    pub fn new(path: &Path, file_bytes: Vec<u8>) -> Self {
-        // to build this we give it a path and some bytes to read?
-
+    pub fn create_resource(path: &Path, file_bytes: Vec<u8>) -> DataPackageResource {
         // handle the option-result, but there's not
         // much to be done about this unfortunately
         let file_name = path.file_name().unwrap().to_str().unwrap().to_owned();
@@ -56,14 +56,22 @@ impl DataPackageResource {
             bytes: file_bytes.len(),
         }
     }
+    pub fn create_digest(data_package_file: &[u8]) -> DataPackageDigest {
+        let file_hash = Sha256::digest(data_package_file);
+        let file_hash_formatted = format!("sha256:{file_hash:x}");
+        DataPackageDigest {
+            path: "datapackage.json".to_owned(),
+            hash: file_hash_formatted,
+        }
+    }
 }
 
 pub fn create_datapackage(warc_file: &[u8]) -> Vec<u8> {
     let mut resources = Vec::with_capacity(1);
 
-    // this can be a loop
+    // this could be a loop, with more things
     let path: &Path = Path::new("archive/data.warc");
-    let resource = DataPackageResource::new(path, warc_file.to_vec());
+    let resource = DataPackage::create_resource(path, warc_file.to_vec());
     resources.push(resource);
 
     let data_package = DataPackage::new(resources);
