@@ -49,7 +49,7 @@ pub fn zip_dir(wacz_object: &Wacz) -> Result<Vec<u8>, Error> {
     add_file_to_archive(
         &mut archive,
         options,
-        &wacz_object.data_package,
+        &wacz_object.data_package_bytes,
         "datapackage.json",
     );
     add_file_to_archive(
