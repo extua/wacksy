@@ -17,7 +17,6 @@ Broadly what needs to be done, read the WACZ file, create an index and, a datapa
 
 ```mermaid
 flowchart
-flowchart
     A@{ shape: lean-r, label: "WARC file"}
     B@{ shape: rect, label: "Create index" }
     C@{ shape: rect, label: "Create datapackage" }
