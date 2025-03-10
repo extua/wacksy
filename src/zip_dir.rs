@@ -4,13 +4,6 @@ use rawzip::{CompressionMethod, Error, ZipArchiveWriter, ZipDataWriter, ZipEntry
 // this function should accept a... struct, with a warc file,
 // which is a stream of bytes, and some other things, also streams of bytes
 pub fn zip_dir(wacz_object: &Wacz) -> Result<Vec<u8>, Error> {
-    // Create a new Zip archive in memory.
-    let mut output = Vec::new();
-    let mut archive = ZipArchiveWriter::new(&mut output);
-
-    // Set options, with no compression.
-    let options = ZipEntryOptions::default().compression_method(CompressionMethod::Store);
-
     fn add_file_to_archive(
         archive: &mut ZipArchiveWriter<&mut Vec<u8>>,
         options: ZipEntryOptions,
@@ -37,6 +30,13 @@ pub fn zip_dir(wacz_object: &Wacz) -> Result<Vec<u8>, Error> {
         // Write out the data descriptor and return the number of bytes the data compressed to.
         file.finish(descriptor).unwrap();
     }
+
+    // Create a new Zip archive in memory.
+    let mut output = Vec::new();
+    let mut archive = ZipArchiveWriter::new(&mut output);
+
+    // Set options, with no compression.
+    let options = ZipEntryOptions::default().compression_method(CompressionMethod::Store);
 
     // this should be an iterator?
     // iterate over everything in the struct and add it recursively
