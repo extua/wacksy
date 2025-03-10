@@ -30,8 +30,9 @@ pub struct DataPackageDigest {
 }
 
 // Higher level data package
-impl DataPackage {
-    pub fn new() -> Self {
+
+impl Default for DataPackage {
+    fn default() -> Self {
         DataPackage {
             profile: "data-package".to_owned(),
             wacz_version: WACZ_VERSION.to_owned(),
@@ -41,7 +42,12 @@ impl DataPackage {
             resources: Vec::with_capacity(2),
         }
     }
-    pub fn add_resource(data_package: &mut DataPackage, resource: DataPackageResource) -> () {
+}
+impl DataPackage {
+    fn new() -> Self {
+        DataPackage::default()
+    }
+    pub fn add_resource(data_package: &mut DataPackage, resource: DataPackageResource) {
         data_package.resources.push(resource);
     }
     pub fn digest(data_package: &Self) -> DataPackageDigest {
@@ -57,7 +63,7 @@ impl DataPackage {
 
 // A singular resource
 impl DataPackageResource {
-    pub fn new(path: &Path, file_bytes: Vec<u8>) -> Self {
+    pub fn new(path: &Path, file_bytes: &[u8]) -> Self {
         // handle the option-result, but there's not
         // much to be done about this unfortunately
         let file_name = path.file_name().unwrap().to_str().unwrap().to_owned();
@@ -66,7 +72,7 @@ impl DataPackageResource {
         // create a sha256 hash, from documentation
         // here https://docs.rs/sha2/latest/sha2/
         // create a Sha256 object
-        let file_hash = Sha256::digest(&file_bytes);
+        let file_hash = Sha256::digest(file_bytes);
         let file_hash_formatted = format!("sha256:{file_hash:x}");
 
         DataPackageResource {
@@ -83,7 +89,7 @@ pub fn compose_datapackage(warc_file: &[u8]) -> DataPackage {
 
     // this _could_ be a loop, with more things
     let path: &Path = Path::new("archive/data.warc");
-    let resource = DataPackageResource::new(path, warc_file.to_vec());
+    let resource = DataPackageResource::new(path, warc_file);
     DataPackage::add_resource(&mut data_package, resource);
 
     data_package
