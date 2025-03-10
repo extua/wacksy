@@ -30,7 +30,6 @@ pub struct DataPackageDigest {
 }
 
 // Higher level data package
-
 impl Default for DataPackage {
     fn default() -> Self {
         DataPackage {

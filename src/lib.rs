@@ -2,6 +2,8 @@ pub mod zip_dir;
 pub use zip_dir::*;
 pub mod datapackage;
 pub use datapackage::*;
+pub mod indexer;
+pub use indexer::*;
 
 const WACZ_VERSION: &str = "1.1.1";
 
