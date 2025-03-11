@@ -1,13 +1,11 @@
 use std::error::Error;
-use std::fs::File;
 use std::path::Path;
 
 use warc::WarcHeader;
 use warc::WarcReader;
 
 pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
-    let file: WarcReader<std::io::BufReader<std::fs::File>> =
-        WarcReader::from_path("examples/warc_example.warc")?;
+    let file = WarcReader::from_path(warc_file_path)?;
 
     let mut count = 0;
     for record in file.iter_records() {

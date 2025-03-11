@@ -1,3 +1,4 @@
+use chrono::Local;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use sha2::{Digest, Sha256};
@@ -13,6 +14,7 @@ pub struct DataPackage {
     pub profile: String,
     pub wacz_version: String,
     pub resources: Vec<DataPackageResource>,
+    pub created: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -39,6 +41,7 @@ impl Default for DataPackage {
             // any WACZ file, the jsonl file and
             // the WARC file
             resources: Vec::with_capacity(2),
+            created: Local::now().to_rfc3339(),
         }
     }
 }
