@@ -18,9 +18,6 @@ jobs:
     steps:
       - name: Checkout directory
         uses: actions/checkout@v4
-      
-      # - name: Setup Rust
-      #   run: rustup update
         
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
@@ -33,9 +30,6 @@ jobs:
     steps:
       - name: Checkout directory
         uses: actions/checkout@v4
-      
-      # - name: Setup Rust
-      #   run: rustup update
         
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
@@ -51,3 +45,8 @@ jobs:
 
       - name: Validate wacz file with py-wacz
         run: wacz validate -f wacz_example.wacz
+
+      - name: Upload test WACZ
+        uses: actions/upload-artifact@v4
+        with:
+          path: "wacz_example.wacz"
