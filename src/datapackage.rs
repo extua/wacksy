@@ -37,11 +37,11 @@ impl Default for DataPackage {
         DataPackage {
             profile: "data-package".to_owned(),
             wacz_version: WACZ_VERSION.to_owned(),
+            created: Local::now().to_rfc3339(),
             // There will be at least two resources in
             // any WACZ file, the jsonl file and
             // the WARC file
             resources: Vec::with_capacity(2),
-            created: Local::now().to_rfc3339(),
         }
     }
 }

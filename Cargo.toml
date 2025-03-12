@@ -14,4 +14,5 @@ rawzip = "0.1.0"
 serde = { version = "1.0.218", features = ["derive"] }
 serde_json = "1.0.140"
 sha2 = "0.10.8"
+url = "2.5.4"
 warc = { git = "https://github.com/extua/warc_reader_patch.git" }
