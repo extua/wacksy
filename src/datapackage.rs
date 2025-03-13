@@ -2,7 +2,7 @@ use chrono::Local;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use sha2::{Digest, Sha256};
-use std::{fmt::format, path::Path};
+use std::path::Path;
 
 use crate::WACZ_VERSION;
 

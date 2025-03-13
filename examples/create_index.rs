@@ -3,8 +3,7 @@ use std::path::Path;
 use wacksy::compose_index;
 
 fn main() {
-    let warc_file_path: &Path =
-        Path::new("../crawl_example/archive/rec-68fed303f9b7-20250312124948172-0.warc");
+    let warc_file_path: &Path = Path::new("../rec-20220831121513558968-203de340fdad.warc.gz");
 
     let index = match compose_index(warc_file_path) {
         Ok(index) => index,
