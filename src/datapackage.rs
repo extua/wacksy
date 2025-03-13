@@ -2,7 +2,7 @@ use chrono::Local;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use sha2::{Digest, Sha256};
-use std::path::Path;
+use std::{fmt::format, path::Path};
 
 use crate::WACZ_VERSION;
 
@@ -13,8 +13,9 @@ use crate::WACZ_VERSION;
 pub struct DataPackage {
     pub profile: String,
     pub wacz_version: String,
-    pub resources: Vec<DataPackageResource>,
     pub created: String,
+    pub software: String,
+    pub resources: Vec<DataPackageResource>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -38,6 +39,7 @@ impl Default for DataPackage {
             profile: "data-package".to_owned(),
             wacz_version: WACZ_VERSION.to_owned(),
             created: Local::now().to_rfc3339(),
+            software: format!("wacksy {}", env!("CARGO_PKG_VERSION")),
             // There will be at least two resources in
             // any WACZ file, the jsonl file and
             // the WARC file
