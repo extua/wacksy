@@ -1,4 +1,6 @@
 use core::error::Error;
+use std::fs::File;
+use std::io::BufReader;
 use std::path::Path;
 
 use chrono::DateTime;
@@ -6,6 +8,7 @@ use url::Position;
 use url::Url;
 use warc::WarcHeader;
 use warc::WarcReader;
+use libflate::gzip::MultiDecoder as GzipReader;
 
 pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     fn create_searchable_url(url: &str) -> Result<String, Box<dyn Error + Send + Sync + 'static>> {
@@ -35,7 +38,15 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
         }
     }
 
-    let file = WarcReader::from_path_gzip(warc_file_path)?;
+
+    // One way around this mess is to have an enum which contains both
+    // types, and return one of those things to file.iter_records()
+    let file: WarcReader<BufReader<File>> = WarcReader::from_path(warc_file_path)?;
+    // let _file2 = WarcReader::from_path_gzip(warc_file_path)?;
+    // let mut gz = GzipReader::new(
+    //     WarcReader::from_path_gzip(warc_file_path).unwrap()
+    //  ).unwrap();
+    //  let mut gz = BufReader::new(gz);
 
     struct CDXJIndexObject {
         url: Url,         // The URL that was archived
@@ -51,7 +62,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
     for record in file.iter_records() {
         // counting arithmetic is unsafe
         // do something about this in future
-        count += 1;
+        count = count.wrapping_add(1);
         match record {
             Err(err) => println!("ERROR: {err}\r\n"),
             Ok(record) => {
