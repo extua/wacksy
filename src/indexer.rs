@@ -1,14 +1,14 @@
 use core::error::Error;
-use std::fs::File;
-use std::io::BufReader;
+use std::ffi::OsStr;
 use std::path::Path;
 
 use chrono::DateTime;
 use url::Position;
 use url::Url;
+use warc::BufferedBody;
+use warc::Record;
 use warc::WarcHeader;
 use warc::WarcReader;
-use libflate::gzip::MultiDecoder as GzipReader;
 
 pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     fn create_searchable_url(url: &str) -> Result<String, Box<dyn Error + Send + Sync + 'static>> {
@@ -38,76 +38,102 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
         }
     }
 
+    // let file = WarcReader::from_path_gzip(warc_file_path)?;
 
-    // One way around this mess is to have an enum which contains both
-    // types, and return one of those things to file.iter_records()
-    let file: WarcReader<BufReader<File>> = WarcReader::from_path(warc_file_path)?;
-    // let _file2 = WarcReader::from_path_gzip(warc_file_path)?;
-    // let mut gz = GzipReader::new(
-    //     WarcReader::from_path_gzip(warc_file_path).unwrap()
-    //  ).unwrap();
-    //  let mut gz = BufReader::new(gz);
+    if warc_file_path.extension() == Some(OsStr::new("gz")) {
+        let file_gzip: WarcReader<
+            std::io::BufReader<libflate::gzip::MultiDecoder<std::io::BufReader<std::fs::File>>>,
+        > = WarcReader::from_path_gzip(warc_file_path)?;
+        process_records_gzip(file_gzip);
+    } else {
+        let file_not_gzip: WarcReader<std::io::BufReader<std::fs::File>> =
+            WarcReader::from_path(warc_file_path)?;
+        process_records_not_gzip(file_not_gzip);
+    };
 
-    struct CDXJIndexObject {
-        url: Url,         // The URL that was archived
-        digest: String,   // A cryptographic hash for the HTTP response payload
-        mime: String,     // The media type for the response payload
-        filename: String, // the WARC file where the WARC record is located
-        offset: usize,    // the byte offset for the WARC record
-        length: String,   // the length in bytes of the WARC record
-        status: String,   // the HTTP status code for the HTTP response
+    // let file2 = WarcReader::from_path(warc_file_path)?;
+
+    // struct CDXJIndexObject {
+    //     url: Url,         // The URL that was archived
+    //     digest: String,   // A cryptographic hash for the HTTP response payload
+    //     mime: String,     // The media type for the response payload
+    //     filename: String, // the WARC file where the WARC record is located
+    //     offset: usize,    // the byte offset for the WARC record
+    //     length: String,   // the length in bytes of the WARC record
+    //     status: String,   // the HTTP status code for the HTTP response
+    // }
+
+    fn process_records_gzip(
+        file_gzip: WarcReader<
+            std::io::BufReader<libflate::gzip::MultiDecoder<std::io::BufReader<std::fs::File>>>,
+        >,
+    ) {
+        let mut count: usize = 0;
+        let file_records = file_gzip.iter_records();
+        for record in file_records {
+            // error handlnig here!
+            let unwrapped_record = record.unwrap();
+            process_record(unwrapped_record, count);
+        }
+        println!("Total records: {count}");
     }
 
-    let mut count: usize = 0;
-    for record in file.iter_records() {
+    fn process_records_not_gzip(file_not_gzip: WarcReader<std::io::BufReader<std::fs::File>>) {
+        let mut count: usize = 0;
+        let file_records = file_not_gzip.iter_records();
+        for record in file_records {
+            // error handlnig here!
+            let unwrapped_record = record.unwrap();
+            process_record(unwrapped_record, count);
+        }
+        println!("Total records: {count}");
+    }
+
+    fn process_record(record: Record<BufferedBody>, mut count: usize) {
         // counting arithmetic is unsafe
         // do something about this in future
         count = count.wrapping_add(1);
-        match record {
-            Err(err) => println!("ERROR: {err}\r\n"),
-            Ok(record) => {
-                // use something like a control flow enum to
-                // organise this
-                // https://doc.rust-lang.org/stable/std/ops/enum.ControlFlow.html
 
-                // Compose searchable url from WARC Header
-                if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
-                    let searchable_url = create_searchable_url(&warc_header_url)?;
-                    println!("{searchable_url}");
-                } else {
-                    println!("No url found in record, handle this error!");
-                }
+        // use something like a control flow enum to
+        // organise this
+        // https://doc.rust-lang.org/stable/std/ops/enum.ControlFlow.html
 
-                // Compose timestamp from WARC header
-                if let Some(warc_header_date) = record.header(WarcHeader::Date) {
-                    let parsed_datetime = DateTime::parse_from_rfc3339(&warc_header_date)?;
-                    // Timestamp format from section 5 of the spec
-                    // https://specs.webrecorder.net/cdxj/0.1.0/#timestamp
-                    let timestamp = format!("{}", parsed_datetime.format("%Y%m%d%H%M%S"));
-                    println!("{timestamp}");
-                } else {
-                    println!("No date found in record, handle this error!");
-                }
+        // println!("{record:?}");
 
-                if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
-                    let json_url = &warc_header_url;
-                    println!("{json_url}");
-                } else {
-                    println!("No url found in record, handle this error!");
-                }
-
-                let record_digest: &str = &record.header(WarcHeader::PayloadDigest).unwrap();
-
-                // this isn't quite the mime type, needs some
-                // processing to remove the rest of the content
-                let record_mime_type: &str = &record.header(WarcHeader::ContentType).unwrap();
-                
-                println!("{record_mime_type}");
-            }
+        // Compose searchable url from WARC Header
+        if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
+            let searchable_url = create_searchable_url(&warc_header_url).unwrap();
+            println!("{searchable_url}");
+        } else {
+            println!("No url found in record, handle this error!");
         }
-    }
 
-    println!("Total records: {count}");
+        // Compose timestamp from WARC header
+        if let Some(warc_header_date) = record.header(WarcHeader::Date) {
+            let parsed_datetime = DateTime::parse_from_rfc3339(&warc_header_date).unwrap();
+            // Timestamp format from section 5 of the spec
+            // https://specs.webrecorder.net/cdxj/0.1.0/#timestamp
+            let timestamp = format!("{}", parsed_datetime.format("%Y%m%d%H%M%S"));
+            println!("{timestamp}");
+        } else {
+            println!("No date found in record, handle this error!");
+        }
+
+        if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
+            let json_url = &warc_header_url;
+            println!("{json_url}");
+        } else {
+            println!("No url found in record, handle this error!");
+        }
+
+        // let record_digest: &str = &record.header(WarcHeader::PayloadDigest).unwrap();
+
+        // // this isn't quite the mime type, needs some
+        // // processing to remove the rest of the content
+        // let record_mime_type: &str = &record.header(WarcHeader::ContentType).unwrap();
+
+        // println!("{record_mime_type}");
+    }
 
     Ok(())
 }
