@@ -1,8 +1,11 @@
 use core::error::Error;
 use std::ffi::OsStr;
+use std::fs::File;
+use std::io::BufReader;
 use std::path::Path;
 
 use chrono::DateTime;
+use libflate::gzip::MultiDecoder;
 use url::Position;
 use url::Url;
 use warc::BufferedBody;
@@ -38,20 +41,14 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
         }
     }
 
-    // let file = WarcReader::from_path_gzip(warc_file_path)?;
-
     if warc_file_path.extension() == Some(OsStr::new("gz")) {
-        let file_gzip: WarcReader<
-            std::io::BufReader<libflate::gzip::MultiDecoder<std::io::BufReader<std::fs::File>>>,
-        > = WarcReader::from_path_gzip(warc_file_path)?;
-        process_records_gzip(file_gzip);
+        let file_gzip: WarcReader<BufReader<MultiDecoder<BufReader<File>>>> =
+            WarcReader::from_path_gzip(warc_file_path)?;
+        process_records_gzip(file_gzip)?;
     } else {
-        let file_not_gzip: WarcReader<std::io::BufReader<std::fs::File>> =
-            WarcReader::from_path(warc_file_path)?;
-        process_records_not_gzip(file_not_gzip);
+        let file_not_gzip: WarcReader<BufReader<File>> = WarcReader::from_path(warc_file_path)?;
+        process_records_not_gzip(file_not_gzip)?;
     };
-
-    // let file2 = WarcReader::from_path(warc_file_path)?;
 
     // struct CDXJIndexObject {
     //     url: Url,         // The URL that was archived
@@ -64,36 +61,48 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
     // }
 
     fn process_records_gzip(
-        file_gzip: WarcReader<
-            std::io::BufReader<libflate::gzip::MultiDecoder<std::io::BufReader<std::fs::File>>>,
-        >,
-    ) {
+        file_gzip: WarcReader<BufReader<MultiDecoder<BufReader<File>>>>,
+    ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         let mut count: usize = 0;
         let file_records = file_gzip.iter_records();
         for record in file_records {
-            // error handlnig here!
-            let unwrapped_record = record.unwrap();
-            process_record(unwrapped_record, count);
+            count = count.wrapping_add(1);
+            let unwrapped_record = match record {
+                Err(err) => {
+                    // better error handlnig here!
+                    println!("Record error: {err}\r\n");
+                    continue;
+                }
+                Ok(record) => record,
+            };
+            process_record(unwrapped_record)?;
         }
         println!("Total records: {count}");
+        Ok(())
     }
 
-    fn process_records_not_gzip(file_not_gzip: WarcReader<std::io::BufReader<std::fs::File>>) {
+    fn process_records_not_gzip(file_not_gzip: WarcReader<BufReader<File>>) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         let mut count: usize = 0;
         let file_records = file_not_gzip.iter_records();
         for record in file_records {
-            // error handlnig here!
-            let unwrapped_record = record.unwrap();
-            process_record(unwrapped_record, count);
+            count = count.wrapping_add(1);
+            let unwrapped_record = match record {
+                Err(err) => {
+                    // better error handlnig here!
+                    println!("Record error: {err}\r\n");
+                    continue;
+                }
+                Ok(record) => record,
+            };
+            process_record(unwrapped_record)?;
         }
         println!("Total records: {count}");
+        Ok(())
     }
 
-    fn process_record(record: Record<BufferedBody>, mut count: usize) {
-        // counting arithmetic is unsafe
-        // do something about this in future
-        count = count.wrapping_add(1);
-
+    fn process_record(
+        record: Record<BufferedBody>,
+    ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         // use something like a control flow enum to
         // organise this
         // https://doc.rust-lang.org/stable/std/ops/enum.ControlFlow.html
@@ -102,7 +111,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
 
         // Compose searchable url from WARC Header
         if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
-            let searchable_url = create_searchable_url(&warc_header_url).unwrap();
+            let searchable_url = create_searchable_url(&warc_header_url)?;
             println!("{searchable_url}");
         } else {
             println!("No url found in record, handle this error!");
@@ -110,7 +119,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
 
         // Compose timestamp from WARC header
         if let Some(warc_header_date) = record.header(WarcHeader::Date) {
-            let parsed_datetime = DateTime::parse_from_rfc3339(&warc_header_date).unwrap();
+            let parsed_datetime = DateTime::parse_from_rfc3339(&warc_header_date)?;
             // Timestamp format from section 5 of the spec
             // https://specs.webrecorder.net/cdxj/0.1.0/#timestamp
             let timestamp = format!("{}", parsed_datetime.format("%Y%m%d%H%M%S"));
@@ -133,6 +142,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
         // let record_mime_type: &str = &record.header(WarcHeader::ContentType).unwrap();
 
         // println!("{record_mime_type}");
+        Ok(())
     }
 
     Ok(())
