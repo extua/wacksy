@@ -69,7 +69,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
             count = count.wrapping_add(1);
             let unwrapped_record = match record {
                 Err(err) => {
-                    // better error handlnig here!
+                    // better error handling here!
                     println!("Record error: {err}\r\n");
                     continue;
                 }
@@ -81,14 +81,16 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
         Ok(())
     }
 
-    fn process_records_not_gzip(file_not_gzip: WarcReader<BufReader<File>>) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+    fn process_records_not_gzip(
+        file_not_gzip: WarcReader<BufReader<File>>,
+    ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         let mut count: usize = 0;
         let file_records = file_not_gzip.iter_records();
         for record in file_records {
             count = count.wrapping_add(1);
             let unwrapped_record = match record {
                 Err(err) => {
-                    // better error handlnig here!
+                    // better error handling here!
                     println!("Record error: {err}\r\n");
                     continue;
                 }
@@ -107,41 +109,67 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
         // organise this
         // https://doc.rust-lang.org/stable/std/ops/enum.ControlFlow.html
 
-        // println!("{record:?}");
+        // println!("{record}");
 
-        // Compose searchable url from WARC Header
-        if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
-            let searchable_url = create_searchable_url(&warc_header_url)?;
-            println!("{searchable_url}");
-        } else {
-            println!("No url found in record, handle this error!");
+        // first check whether the record is a response
+        let record_type: &str = &record.header(WarcHeader::WarcType).unwrap();
+        if ["response", "revisit", "resource", "metadata"].contains(&record_type) {
+            println!("This record is a {record_type}");
+
+            // Compose searchable url from WARC Header
+            if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
+                let searchable_url = create_searchable_url(&warc_header_url)?;
+                println!("searchable url is {searchable_url}");
+            } else {
+                println!("No url found in record, handle this error!");
+            }
+
+            // Compose timestamp from WARC header
+            if let Some(warc_header_date) = record.header(WarcHeader::Date) {
+                let parsed_datetime = DateTime::parse_from_rfc3339(&warc_header_date)?;
+                // Timestamp format from section 5 of the spec
+                // https://specs.webrecorder.net/cdxj/0.1.0/#timestamp
+                let timestamp = format!("{}", parsed_datetime.format("%Y%m%d%H%M%S"));
+                println!("timestamp is {timestamp}");
+            } else {
+                println!("No date found in record, handle this error!");
+            }
+
+            if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
+                let json_url = &warc_header_url;
+                println!("record url is {json_url}");
+            } else {
+                println!("No url found in record, handle this error!");
+            }
+
+            if let Some(record_digest) = record.header(WarcHeader::PayloadDigest) {
+                println!("record digest is {record_digest}");
+            } else {
+                println!("No digest found in record, handle this error!");
+            }
+
+            // beware! the warc content type is not the same
+            // as the record content type
+            let record_content_type: &str = &record.header(WarcHeader::ContentType).unwrap();
+            if let Some(record_mime_type) = record_content_type.split(";").into_iter().nth(0) {
+                println!("record content type is {record_mime_type}");
+            } else {
+                println!("Unable to read the MIME type, handle this error!");
+            }
+
+            // let record_content_type = &record.body();
+
+            // let record_filename: &str = &record.header(WarcHeader::Filename).unwrap();
+            // println!("record filename is {record_filename}");
+
+            // if let Some(record_filename) = record.header(WarcHeader::Filename) {
+            //     let json_filename = &record_filename;
+            //     println!("record filename is {json_filename}");
+            // } else {
+            //     println!("No filename found in record, handle this error!");
+            // }
         }
 
-        // Compose timestamp from WARC header
-        if let Some(warc_header_date) = record.header(WarcHeader::Date) {
-            let parsed_datetime = DateTime::parse_from_rfc3339(&warc_header_date)?;
-            // Timestamp format from section 5 of the spec
-            // https://specs.webrecorder.net/cdxj/0.1.0/#timestamp
-            let timestamp = format!("{}", parsed_datetime.format("%Y%m%d%H%M%S"));
-            println!("{timestamp}");
-        } else {
-            println!("No date found in record, handle this error!");
-        }
-
-        if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
-            let json_url = &warc_header_url;
-            println!("{json_url}");
-        } else {
-            println!("No url found in record, handle this error!");
-        }
-
-        // let record_digest: &str = &record.header(WarcHeader::PayloadDigest).unwrap();
-
-        // // this isn't quite the mime type, needs some
-        // // processing to remove the rest of the content
-        // let record_mime_type: &str = &record.header(WarcHeader::ContentType).unwrap();
-
-        // println!("{record_mime_type}");
         Ok(())
     }
 
