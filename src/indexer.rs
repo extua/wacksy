@@ -10,6 +10,8 @@ use url::Position;
 use url::Url;
 use warc::BufferedBody;
 use warc::Record;
+use warc::RecordIter;
+use warc::RecordType;
 use warc::WarcHeader;
 use warc::WarcReader;
 
@@ -44,10 +46,13 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
     if warc_file_path.extension() == Some(OsStr::new("gz")) {
         let file_gzip: WarcReader<BufReader<MultiDecoder<BufReader<File>>>> =
             WarcReader::from_path_gzip(warc_file_path)?;
-        process_records_gzip(file_gzip)?;
+        let file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>> =
+            file_gzip.iter_records();
+        process_records_gzip(file_records)?;
     } else {
         let file_not_gzip: WarcReader<BufReader<File>> = WarcReader::from_path(warc_file_path)?;
-        process_records_not_gzip(file_not_gzip)?;
+        let file_records: RecordIter<BufReader<File>> = file_not_gzip.iter_records();
+        process_records_not_gzip(file_records)?;
     };
 
     // struct CDXJIndexObject {
@@ -61,60 +66,76 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
     // }
 
     fn process_records_gzip(
-        file_gzip: WarcReader<BufReader<MultiDecoder<BufReader<File>>>>,
+        file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>>,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
-        let mut count: usize = 0;
-        let file_records = file_gzip.iter_records();
+        let mut record_count: u16 = 0;
+        let mut byte_counter: u64 = 0;
         for record in file_records {
-            count = count.wrapping_add(1);
-            let unwrapped_record = match record {
+            record_count = record_count.wrapping_add(1);
+            let unwrapped_record: Record<BufferedBody> = match record {
                 Err(err) => {
                     // better error handling here!
                     println!("Record error: {err}\r\n");
                     continue;
                 }
-                Ok(record) => record,
+                Ok(record) => record
             };
-            process_record(unwrapped_record)?;
+            // if the previous record is skipped,
+            // that might mess up the counter?
+            byte_counter = byte_counter.wrapping_add(unwrapped_record.content_length());
+            process_record(unwrapped_record, byte_counter)?;
         }
-        println!("Total records: {count}");
+        println!("Total records: {record_count}");
         Ok(())
     }
 
     fn process_records_not_gzip(
-        file_not_gzip: WarcReader<BufReader<File>>,
+        file_records: RecordIter<BufReader<File>>,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
-        let mut count: usize = 0;
-        let file_records = file_not_gzip.iter_records();
+        let mut record_count: u16 = 0;
+        let mut byte_counter: u64 = 0;
         for record in file_records {
-            count = count.wrapping_add(1);
-            let unwrapped_record = match record {
+            record_count = record_count.wrapping_add(1);
+            let unwrapped_record: Record<BufferedBody> = match record {
                 Err(err) => {
                     // better error handling here!
                     println!("Record error: {err}\r\n");
                     continue;
                 }
-                Ok(record) => record,
+                Ok(record) => record
             };
-            process_record(unwrapped_record)?;
+            // if the previous record is skipped,
+            // that might mess up the counter?
+            byte_counter = byte_counter.wrapping_add(unwrapped_record.content_length());
+            println!("byte offset is {byte_counter}");
+            process_record(unwrapped_record, byte_counter)?;
         }
-        println!("Total records: {count}");
+        println!("Total records: {record_count}");
         Ok(())
     }
 
     fn process_record(
         record: Record<BufferedBody>,
+        byte_counter: u64,
+
     ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         // use something like a control flow enum to
         // organise this
         // https://doc.rust-lang.org/stable/std/ops/enum.ControlFlow.html
 
-        // println!("{record}");
-
-        // first check whether the record is a response
-        let record_type: &str = &record.header(WarcHeader::WarcType).unwrap();
-        if ["response", "revisit", "resource", "metadata"].contains(&record_type) {
-            println!("This record is a {record_type}");
+        // first check whether the record is either
+        // a response, revisit, resource, or metadata
+        let record_type: &warc::RecordType = record.warc_type();
+        if [
+            RecordType::Response,
+            RecordType::Revisit,
+            RecordType::Resource,
+            RecordType::Metadata,
+        ]
+        .contains(&record_type)
+        {
+            println!("\n\n--------");
+            println!("Processing record {} of type {record_type}", record.warc_id());
 
             // Compose searchable url from WARC Header
             if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
@@ -150,12 +171,14 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
 
             // beware! the warc content type is not the same
             // as the record content type
-            let record_content_type: &str = &record.header(WarcHeader::ContentType).unwrap();
-            if let Some(record_mime_type) = record_content_type.split(";").into_iter().nth(0) {
-                println!("record content type is {record_mime_type}");
-            } else {
-                println!("Unable to read the MIME type, handle this error!");
-            }
+            // in order to actually do anything about this we need
+            // to read the record body
+            let record_content_type = record.body();
+
+
+            println!("offset is {byte_counter}");
+            println!("length is {}", record.content_length());
+
 
             // let record_content_type = &record.body();
 
