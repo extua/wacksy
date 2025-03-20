@@ -5,7 +5,7 @@ pub use datapackage::*;
 pub mod indexer;
 pub use indexer::*;
 
-const WACZ_VERSION: &str = "1.1.1";
+const WACZ_VERSION: &str = "1.1.1"; // deprecated in WACZ 1.2.0
 
 pub struct Wacz {
     pub warc_file: Vec<u8>,
