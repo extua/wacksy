@@ -77,13 +77,17 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                     // Any error with the record here
                     // affects the offset counter, so
                     // can't index the file!
-                    panic!("Unable to index file ???. Record error: {err}\r\n");
+                    panic!("Unable to index file. Record error: {err}\r\n");
                 }
-                Ok(record) => record
+                Ok(record) => record,
             };
             process_record(&unwrapped_record, &byte_counter)?;
+            // here we are getting the length of the unwrapped record header
+            // plus the record body
+            let record_length: u64 = unwrapped_record.content_length()
+                + unwrapped_record.into_raw_parts().0.to_string().len() as u64;
             // increment the byte counter after processing the record
-            byte_counter = byte_counter.wrapping_add(unwrapped_record.content_length());
+            byte_counter = byte_counter.wrapping_add(record_length);
         }
         println!("Total records: {record_count}");
         Ok(())
@@ -103,12 +107,15 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                     // can't index the file!
                     panic!("Unable to index file ???. Record error: {err}\r\n");
                 }
-                Ok(record) => record
+                Ok(record) => record,
             };
             process_record(&unwrapped_record, &byte_counter)?;
+            // here we are getting the length of the unwrapped record header
+            // plus the record body
+            let record_length: u64 = unwrapped_record.content_length()
+                + unwrapped_record.into_raw_parts().0.to_string().len() as u64;
             // increment the byte counter after processing the record
-            byte_counter = byte_counter.wrapping_add(unwrapped_record.content_length());
-
+            byte_counter = byte_counter.wrapping_add(record_length);
         }
         println!("Total records: {record_count}");
         Ok(())
@@ -117,7 +124,6 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
     fn process_record(
         record: &Record<BufferedBody>,
         byte_counter: &u64,
-
     ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         // use something like a control flow enum to
         // organise this
@@ -134,8 +140,11 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
         ]
         .contains(&record_type)
         {
-            println!("\n\n--------");
-            println!("Processing record {} of type {record_type}", record.warc_id());
+            println!("\n--------");
+            println!(
+                "Processing record {} of type {record_type}",
+                record.warc_id()
+            );
 
             // Compose searchable url from WARC Header
             if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
@@ -173,12 +182,12 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
             // as the record content type
             // in order to actually do anything about this we need
             // to read the record body
-            let record_content_type = record.body();
+            // let record_content_type = record.body();
 
-
-            println!("offset is {byte_counter}");
+            println!("offset is {}", byte_counter);
             println!("length is {}", record.content_length());
 
+            println!("--------\n");
 
             // let record_content_type = &record.body();
 
