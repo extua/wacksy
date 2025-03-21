@@ -68,22 +68,22 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
     fn process_records_gzip(
         file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>>,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
-        let mut record_count: u16 = 0;
-        let mut byte_counter: u64 = 0;
+        let mut record_count: u16 = 0u16;
+        let mut byte_counter: u64 = 0u64;
         for record in file_records {
             record_count = record_count.wrapping_add(1);
             let unwrapped_record: Record<BufferedBody> = match record {
                 Err(err) => {
-                    // better error handling here!
-                    println!("Record error: {err}\r\n");
-                    continue;
+                    // Any error with the record here
+                    // affects the offset counter, so
+                    // can't index the file!
+                    panic!("Unable to index file ???. Record error: {err}\r\n");
                 }
                 Ok(record) => record
             };
-            // if the previous record is skipped,
-            // that might mess up the counter?
+            process_record(&unwrapped_record, &byte_counter)?;
+            // increment the byte counter after processing the record
             byte_counter = byte_counter.wrapping_add(unwrapped_record.content_length());
-            process_record(unwrapped_record, byte_counter)?;
         }
         println!("Total records: {record_count}");
         Ok(())
@@ -92,31 +92,31 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
     fn process_records_not_gzip(
         file_records: RecordIter<BufReader<File>>,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
-        let mut record_count: u16 = 0;
-        let mut byte_counter: u64 = 0;
+        let mut record_count: u16 = 0u16;
+        let mut byte_counter: u64 = 0u64;
         for record in file_records {
             record_count = record_count.wrapping_add(1);
             let unwrapped_record: Record<BufferedBody> = match record {
                 Err(err) => {
-                    // better error handling here!
-                    println!("Record error: {err}\r\n");
-                    continue;
+                    // Any error with the record here
+                    // affects the offset counter, so
+                    // can't index the file!
+                    panic!("Unable to index file ???. Record error: {err}\r\n");
                 }
                 Ok(record) => record
             };
-            // if the previous record is skipped,
-            // that might mess up the counter?
+            process_record(&unwrapped_record, &byte_counter)?;
+            // increment the byte counter after processing the record
             byte_counter = byte_counter.wrapping_add(unwrapped_record.content_length());
-            println!("byte offset is {byte_counter}");
-            process_record(unwrapped_record, byte_counter)?;
+
         }
         println!("Total records: {record_count}");
         Ok(())
     }
 
     fn process_record(
-        record: Record<BufferedBody>,
-        byte_counter: u64,
+        record: &Record<BufferedBody>,
+        byte_counter: &u64,
 
     ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         // use something like a control flow enum to
