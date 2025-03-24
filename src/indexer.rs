@@ -1,19 +1,14 @@
 use core::error::Error;
-use std::ffi::OsStr;
+use core::str;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
+use std::{ffi::OsStr, io::Read};
 
 use chrono::DateTime;
 use libflate::gzip::MultiDecoder;
-use url::Position;
-use url::Url;
-use warc::BufferedBody;
-use warc::Record;
-use warc::RecordIter;
-use warc::RecordType;
-use warc::WarcHeader;
-use warc::WarcReader;
+use url::{Position, Url};
+use warc::{BufferedBody, Record, RecordIter, RecordType, WarcHeader, WarcReader};
 
 pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     fn create_searchable_url(url: &str) -> Result<String, Box<dyn Error + Send + Sync + 'static>> {
@@ -186,6 +181,64 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
 
             println!("offset is {}", byte_counter);
             println!("length is {}", record.content_length());
+
+            let mime_type: &str = if record_type == &RecordType::Revisit {
+                "revisit"
+            } else {
+                println!("parse this from http header");
+
+                let record_body: &[u8] = record.body();
+
+                // Find the position of the first newline, this will
+                // get just the headers, not the full request, see
+                // https://stackoverflow.com/questions/69610022/how-can-i-get-httparse-to-parse-my-request-correctly
+                let mut first_http_response_byte_counter: usize = 0;
+                for byte in record_body {
+                    if byte == &0xA {
+                        first_http_response_byte_counter += 1;
+                        break;
+                    } else {
+                        first_http_response_byte_counter += 1;
+                        continue;
+                    }
+                }
+
+                // Find the position of the first sequence of
+                // two newlines, this ends the HTTP 1.1 header block
+                // according to section 3 of RFC7230
+                let mut second_http_response_byte_counter: usize = 0;
+                for byte in record_body {
+                    let next_byte: &u8 = record_body.iter().next().unwrap();
+                    if byte == &0xA && next_byte == &0xA {
+                        break;
+                    } else {
+                        second_http_response_byte_counter += 1;
+                        continue;
+                    }
+                }
+                println!("first newline is at byte {first_http_response_byte_counter}");
+                println!("second newline is at byte {second_http_response_byte_counter}");
+
+                // cut the HTTP header out of the WARC body
+                let header_byte_slice = &record_body
+                    [first_http_response_byte_counter..second_http_response_byte_counter];
+
+                // create a list of 50 empty headers, if this is not enough then
+                // you'll get a TooManyHeaders error
+                let mut headers = [httparse::EMPTY_HEADER; 50];
+                // parse the raw byte array with httparse
+                httparse::parse_headers(header_byte_slice, &mut headers).unwrap();
+                // loop through the list of headers looking for the content-type
+                let mut content_type: &str = "";
+                for header in &headers {
+                    if header.name == "content-type" {
+                        content_type = str::from_utf8(header.value).unwrap();
+                    }
+                }
+                content_type
+            };
+
+            println!("content type is {mime_type}");
 
             println!("--------\n");
 
