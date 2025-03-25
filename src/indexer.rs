@@ -40,11 +40,11 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
             WarcReader::from_path_gzip(warc_file_path)?;
         let file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>> =
             file_gzip.iter_records();
-        process_records_gzip(file_records)?;
+        process_records_gzip(file_records, warc_file_path)?;
     } else {
         let file_not_gzip: WarcReader<BufReader<File>> = WarcReader::from_path(warc_file_path)?;
         let file_records: RecordIter<BufReader<File>> = file_not_gzip.iter_records();
-        process_records_not_gzip(file_records)?;
+        process_records_not_gzip(file_records, warc_file_path)?;
     };
 
     // struct CDXJIndexObject {
@@ -59,6 +59,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
 
     fn process_records_gzip(
         file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>>,
+        warc_file_path: &Path,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         let mut record_count: u16 = 0u16;
         let mut byte_counter: u64 = 0u64;
@@ -73,7 +74,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 }
                 Ok(record) => record,
             };
-            process_record(&unwrapped_record, byte_counter)?;
+            process_record(&unwrapped_record, byte_counter, warc_file_path)?;
             // here we are getting the length of the unwrapped record header
             // plus the record body
             let record_length: u64 = unwrapped_record.content_length()
@@ -87,6 +88,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
 
     fn process_records_not_gzip(
         file_records: RecordIter<BufReader<File>>,
+        warc_file_path: &Path,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         let mut record_count: u16 = 0u16;
         let mut byte_counter: u64 = 0u64;
@@ -101,7 +103,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 }
                 Ok(record) => record,
             };
-            process_record(&unwrapped_record, byte_counter)?;
+            process_record(&unwrapped_record, byte_counter, warc_file_path)?;
             // here we are getting the length of the unwrapped record header
             // plus the record body
             let record_length: u64 = unwrapped_record.content_length()
@@ -116,6 +118,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
     fn process_record(
         record: &Record<BufferedBody>,
         byte_counter: u64,
+        warc_file_path: &Path,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         // use something like a control flow enum to
         // organise this
@@ -170,27 +173,23 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 println!("No digest found in record, handle this error!");
             }
 
-            // beware! the warc content type is not the same
-            // as the record content type
-            // in order to actually do anything about this we need
-            // to read the record body
-            // let record_content_type = record.body();
-
             println!("offset is {}", byte_counter);
             println!("length is {}", record.content_length());
 
+            // beware! the warc content type is not the same
+            // as the record content type in order to actually
+            // do anything about this we need to read
+            // the record body
             let mime_type: &str = if record_type == &RecordType::Revisit {
                 "revisit"
             } else {
                 println!("parse this from http header");
 
-                let record_body: &[u8] = record.body();
-
                 // Find the position of the first newline, this will
                 // get just the headers, not the full request, see
                 // https://stackoverflow.com/questions/69610022/how-can-i-get-httparse-to-parse-my-request-correctly
                 let mut first_http_response_byte_counter: usize = 0;
-                for byte in record_body {
+                for byte in record.body() {
                     first_http_response_byte_counter += 1;
                     if byte == &0xA {
                         first_http_response_byte_counter += 1;
@@ -202,8 +201,8 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 // two newlines, this ends the HTTP 1.1 header block
                 // according to section 3 of RFC7230
                 let mut second_http_response_byte_counter: usize = 0;
-                for byte in record_body {
-                    let next_byte: &u8 = record_body.iter().next().unwrap();
+                for byte in record.body() {
+                    let next_byte: &u8 = record.body().iter().next().unwrap();
                     second_http_response_byte_counter += 1;
                     if byte == &0xA && next_byte == &0xA {
                         break;
@@ -213,12 +212,12 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 println!("second newline is at byte {second_http_response_byte_counter}");
 
                 // cut the HTTP header out of the WARC body
-                let header_byte_slice = &record_body
+                let header_byte_slice = &record.body()
                     [first_http_response_byte_counter..second_http_response_byte_counter];
 
                 // create a list of 50 empty headers, if this is not enough then
                 // you'll get a TooManyHeaders error
-                let mut headers = [httparse::EMPTY_HEADER; 50];
+                let mut headers = [httparse::EMPTY_HEADER; 64];
                 // parse the raw byte array with httparse
                 httparse::parse_headers(header_byte_slice, &mut headers).unwrap();
                 // loop through the list of headers looking for the content-type
@@ -230,22 +229,33 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 }
                 content_type
             };
-
             println!("content type is {mime_type}");
 
+            // Cut a slice out from the record body from
+            // byte 9 to byte 12, this should be the
+            // status code
+            let header_byte_slice: &[u8] = &record.body()[9..12];
+            // Convert it to a string, if this doesn't work
+            // it'll produce unknown characters
+            let header_status = String::from_utf8_lossy(header_byte_slice);
+            // Parse it to a number, if there's an error it appears here!
+            let header_status_int = header_status.parse::<u16>().unwrap();
+            println!("header status {header_status_int}");
+
+            let filename: String =
+                if let Some(record_filename) = record.header(WarcHeader::Filename) {
+                    println!("record filename is {record_filename} from file");
+                    record_filename.into_owned()
+                } else {
+                    println!("No filename found in record, getting filename from path");
+                    let filename_os_string = warc_file_path.file_name().unwrap();
+                    let filename_str = filename_os_string.to_str().unwrap();
+                    filename_str.to_string()
+                };
+
+            println!("filename is {filename}");
+
             println!("--------\n");
-
-            // let record_content_type = &record.body();
-
-            // let record_filename: &str = &record.header(WarcHeader::Filename).unwrap();
-            // println!("record filename is {record_filename}");
-
-            // if let Some(record_filename) = record.header(WarcHeader::Filename) {
-            //     let json_filename = &record_filename;
-            //     println!("record filename is {json_filename}");
-            // } else {
-            //     println!("No filename found in record, handle this error!");
-            // }
         }
 
         Ok(())
