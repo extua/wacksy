@@ -1,9 +1,9 @@
 use core::error::Error;
 use core::str;
+use std::ffi::OsStr;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-use std::{ffi::OsStr, io::Read};
 
 use chrono::DateTime;
 use libflate::gzip::MultiDecoder;
@@ -15,7 +15,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
         let lowercase_url = url.to_lowercase();
         let parsed_url = Url::parse(&lowercase_url);
         match parsed_url {
-            Err(err) => return Err(format!("Error parsing URL: {err}\r\n").into()),
+            Err(err) => Err(format!("Error parsing URL: {err}\r\n").into()),
             Ok(successfully_parsed_url) => {
                 if let Some(host) = successfully_parsed_url.host_str() {
                     // split the host string into an array at each dot
@@ -30,10 +30,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                     let searchable_url = format!("{host_reversed}){url_path}");
                     return Ok(searchable_url);
                 }
-                return Err(format!(
-                    "No hostname found in {lowercase_url}, handle this error!\r\n"
-                )
-                .into());
+                Err(format!("No hostname found in {lowercase_url}, handle this error!\r\n").into())
             }
         }
     }
@@ -76,7 +73,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 }
                 Ok(record) => record,
             };
-            process_record(&unwrapped_record, &byte_counter)?;
+            process_record(&unwrapped_record, byte_counter)?;
             // here we are getting the length of the unwrapped record header
             // plus the record body
             let record_length: u64 = unwrapped_record.content_length()
@@ -104,7 +101,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 }
                 Ok(record) => record,
             };
-            process_record(&unwrapped_record, &byte_counter)?;
+            process_record(&unwrapped_record, byte_counter)?;
             // here we are getting the length of the unwrapped record header
             // plus the record body
             let record_length: u64 = unwrapped_record.content_length()
@@ -118,7 +115,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
 
     fn process_record(
         record: &Record<BufferedBody>,
-        byte_counter: &u64,
+        byte_counter: u64,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         // use something like a control flow enum to
         // organise this
@@ -133,7 +130,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
             RecordType::Resource,
             RecordType::Metadata,
         ]
-        .contains(&record_type)
+        .contains(record_type)
         {
             println!("\n--------");
             println!(
@@ -194,12 +191,10 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 // https://stackoverflow.com/questions/69610022/how-can-i-get-httparse-to-parse-my-request-correctly
                 let mut first_http_response_byte_counter: usize = 0;
                 for byte in record_body {
+                    first_http_response_byte_counter += 1;
                     if byte == &0xA {
                         first_http_response_byte_counter += 1;
                         break;
-                    } else {
-                        first_http_response_byte_counter += 1;
-                        continue;
                     }
                 }
 
@@ -209,11 +204,9 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 let mut second_http_response_byte_counter: usize = 0;
                 for byte in record_body {
                     let next_byte: &u8 = record_body.iter().next().unwrap();
+                    second_http_response_byte_counter += 1;
                     if byte == &0xA && next_byte == &0xA {
                         break;
-                    } else {
-                        second_http_response_byte_counter += 1;
-                        continue;
                     }
                 }
                 println!("first newline is at byte {first_http_response_byte_counter}");
