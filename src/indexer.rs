@@ -10,53 +10,41 @@ use libflate::gzip::MultiDecoder;
 use url::{Position, Url};
 use warc::{BufferedBody, Record, RecordIter, RecordType, WarcHeader, WarcReader};
 
-pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
-    fn create_searchable_url(url: &str) -> Result<String, Box<dyn Error + Send + Sync + 'static>> {
-        let lowercase_url = url.to_lowercase();
-        let parsed_url = Url::parse(&lowercase_url);
-        match parsed_url {
-            Err(err) => Err(format!("Error parsing URL: {err}\r\n").into()),
-            Ok(successfully_parsed_url) => {
-                if let Some(host) = successfully_parsed_url.host_str() {
-                    // split the host string into an array at each dot
-                    let mut host_split: Vec<&str> = host.split('.').collect();
-                    // reverse the order of the array
-                    host_split.reverse();
-                    // join the array back into a comma-separated string
-                    let host_reversed = host_split.join(",");
-                    // capture everything else on the end of the url
-                    let url_path = &successfully_parsed_url[Position::BeforePath..];
-                    // put it all together
-                    let searchable_url = format!("{host_reversed}){url_path}");
-                    return Ok(searchable_url);
-                }
-                Err(format!("No hostname found in {lowercase_url}, handle this error!\r\n").into())
+fn create_searchable_url(url: &str) -> Result<String, Box<dyn Error + Send + Sync + 'static>> {
+    let lowercase_url = url.to_lowercase();
+    let parsed_url = Url::parse(&lowercase_url);
+    match parsed_url {
+        Err(err) => Err(format!("Error parsing URL: {err}\r\n").into()),
+        Ok(successfully_parsed_url) => {
+            if let Some(host) = successfully_parsed_url.host_str() {
+                // split the host string into an array at each dot
+                let mut host_split: Vec<&str> = host.split('.').collect();
+                // reverse the order of the array
+                host_split.reverse();
+                // join the array back into a comma-separated string
+                let host_reversed = host_split.join(",");
+                // capture everything else on the end of the url
+                let url_path = &successfully_parsed_url[Position::BeforePath..];
+                // put it all together
+                let searchable_url = format!("{host_reversed}){url_path}");
+                return Ok(searchable_url);
             }
+            Err(format!("No hostname found in {lowercase_url}, handle this error!\r\n").into())
         }
     }
+}
 
-    if warc_file_path.extension() == Some(OsStr::new("gz")) {
-        let file_gzip: WarcReader<BufReader<MultiDecoder<BufReader<File>>>> =
-            WarcReader::from_path_gzip(warc_file_path)?;
-        let file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>> =
-            file_gzip.iter_records();
-        process_records_gzip(file_records, warc_file_path)?;
-    } else {
-        let file_not_gzip: WarcReader<BufReader<File>> = WarcReader::from_path(warc_file_path)?;
-        let file_records: RecordIter<BufReader<File>> = file_not_gzip.iter_records();
-        process_records_not_gzip(file_records, warc_file_path)?;
-    };
+pub struct CDXJIndexRecord {
+    url: Url,         // The URL that was archived
+    digest: String,   // A cryptographic hash for the HTTP response payload
+    mime: String,     // The media type for the response payload
+    filename: String, // the WARC file where the WARC record is located
+    offset: usize,    // the byte offset for the WARC record
+    length: String,   // the length in bytes of the WARC record
+    status: String,   // the HTTP status code for the HTTP response
+}
 
-    // struct CDXJIndexObject {
-    //     url: Url,         // The URL that was archived
-    //     digest: String,   // A cryptographic hash for the HTTP response payload
-    //     mime: String,     // The media type for the response payload
-    //     filename: String, // the WARC file where the WARC record is located
-    //     offset: usize,    // the byte offset for the WARC record
-    //     length: String,   // the length in bytes of the WARC record
-    //     status: String,   // the HTTP status code for the HTTP response
-    // }
-
+pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     fn process_records_gzip(
         file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>>,
         warc_file_path: &Path,
@@ -113,6 +101,37 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
         }
         println!("Total records: {record_count}");
         Ok(())
+    }
+
+    fn cut_http_headers_from_record(record: &Record<BufferedBody>) -> &[u8] {
+        // Find the position of the first newline, this will
+        // get just the headers, not the full request, see
+        // https://stackoverflow.com/questions/69610022/how-can-i-get-httparse-to-parse-my-request-correctly
+        let mut first_http_response_byte_counter: usize = 0;
+        for byte in record.body() {
+            first_http_response_byte_counter += 1;
+            if byte == &0xA {
+                first_http_response_byte_counter += 1;
+                break;
+            }
+        }
+
+        // Find the position of the first sequence of
+        // two newlines, this ends the HTTP 1.1 header block
+        // according to section 3 of RFC7230
+        let mut second_http_response_byte_counter: usize = 0;
+        for byte in record.body() {
+            let next_byte: &u8 = record.body().iter().next().unwrap();
+            second_http_response_byte_counter += 1;
+            if byte == &0xA && next_byte == &0xA {
+                break;
+            }
+        }
+        println!("first newline is at byte {first_http_response_byte_counter}");
+        println!("second newline is at byte {second_http_response_byte_counter}");
+
+        // cut the HTTP header out of the WARC body
+        &record.body()[first_http_response_byte_counter..second_http_response_byte_counter]
     }
 
     fn process_record(
@@ -183,42 +202,12 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
             let mime_type: &str = if record_type == &RecordType::Revisit {
                 "revisit"
             } else {
-                println!("parse this from http header");
-
-                // Find the position of the first newline, this will
-                // get just the headers, not the full request, see
-                // https://stackoverflow.com/questions/69610022/how-can-i-get-httparse-to-parse-my-request-correctly
-                let mut first_http_response_byte_counter: usize = 0;
-                for byte in record.body() {
-                    first_http_response_byte_counter += 1;
-                    if byte == &0xA {
-                        first_http_response_byte_counter += 1;
-                        break;
-                    }
-                }
-
-                // Find the position of the first sequence of
-                // two newlines, this ends the HTTP 1.1 header block
-                // according to section 3 of RFC7230
-                let mut second_http_response_byte_counter: usize = 0;
-                for byte in record.body() {
-                    let next_byte: &u8 = record.body().iter().next().unwrap();
-                    second_http_response_byte_counter += 1;
-                    if byte == &0xA && next_byte == &0xA {
-                        break;
-                    }
-                }
-                println!("first newline is at byte {first_http_response_byte_counter}");
-                println!("second newline is at byte {second_http_response_byte_counter}");
-
-                // cut the HTTP header out of the WARC body
-                let header_byte_slice = &record.body()
-                    [first_http_response_byte_counter..second_http_response_byte_counter];
-
-                // create a list of 50 empty headers, if this is not enough then
-                // you'll get a TooManyHeaders error
+                // create a list of 64 empty headers, if this is not
+                // enough then you'll get a TooManyHeaders error
                 let mut headers = [httparse::EMPTY_HEADER; 64];
-                // parse the raw byte array with httparse
+                let header_byte_slice = cut_http_headers_from_record(record);
+                // parse the raw byte array with httparse, this adds
+                // data to the empty header list created above
                 httparse::parse_headers(header_byte_slice, &mut headers).unwrap();
                 // loop through the list of headers looking for the content-type
                 let mut content_type: &str = "";
@@ -260,6 +249,18 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
 
         Ok(())
     }
+
+    if warc_file_path.extension() == Some(OsStr::new("gz")) {
+        let file_gzip: WarcReader<BufReader<MultiDecoder<BufReader<File>>>> =
+            WarcReader::from_path_gzip(warc_file_path)?;
+        let file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>> =
+            file_gzip.iter_records();
+        process_records_gzip(file_records, warc_file_path)?;
+    } else {
+        let file_not_gzip: WarcReader<BufReader<File>> = WarcReader::from_path(warc_file_path)?;
+        let file_records: RecordIter<BufReader<File>> = file_not_gzip.iter_records();
+        process_records_not_gzip(file_records, warc_file_path)?;
+    };
 
     Ok(())
 }
