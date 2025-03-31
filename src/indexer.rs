@@ -44,6 +44,41 @@ pub struct CDXJIndexRecord {
     status: u16,      // the HTTP status code for the HTTP response
 }
 
+fn cut_http_headers_from_record(record: &Record<BufferedBody>) -> &[u8] {
+    // Find the position of the first newline, this will
+    // get just the headers, not the full request, see
+    // https://stackoverflow.com/questions/69610022/how-can-i-get-httparse-to-parse-my-request-correctly
+    let mut first_http_response_byte_counter: usize = 0;
+    for byte in record.body() {
+        first_http_response_byte_counter += 1;
+        if byte == &0xA {
+            first_http_response_byte_counter += 1;
+            break;
+        }
+    }
+
+    // Find the position of the first sequence of
+    // two newlines, this ends the HTTP 1.1 header block
+    // according to section 3 of RFC7230
+    let mut second_http_response_byte_counter: usize = 0;
+    for byte in record.body() {
+        let next_byte: &u8 = record.body().iter().next().unwrap();
+        second_http_response_byte_counter += 1;
+        if byte == &0xA && next_byte == &0xA {
+            break;
+        }
+    }
+    println!("first newline is at byte {first_http_response_byte_counter}");
+    println!("second newline is at byte {second_http_response_byte_counter}");
+
+    // cut the HTTP header out of the WARC body
+    // and, there is an error here to handle
+    record
+        .body()
+        .get(first_http_response_byte_counter..second_http_response_byte_counter)
+        .unwrap()
+}
+
 pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     fn process_records_gzip(
         file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>>,
@@ -101,41 +136,6 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
         }
         println!("Total records: {record_count}");
         Ok(())
-    }
-
-    fn cut_http_headers_from_record(record: &Record<BufferedBody>) -> &[u8] {
-        // Find the position of the first newline, this will
-        // get just the headers, not the full request, see
-        // https://stackoverflow.com/questions/69610022/how-can-i-get-httparse-to-parse-my-request-correctly
-        let mut first_http_response_byte_counter: usize = 0;
-        for byte in record.body() {
-            first_http_response_byte_counter += 1;
-            if byte == &0xA {
-                first_http_response_byte_counter += 1;
-                break;
-            }
-        }
-
-        // Find the position of the first sequence of
-        // two newlines, this ends the HTTP 1.1 header block
-        // according to section 3 of RFC7230
-        let mut second_http_response_byte_counter: usize = 0;
-        for byte in record.body() {
-            let next_byte: &u8 = record.body().iter().next().unwrap();
-            second_http_response_byte_counter += 1;
-            if byte == &0xA && next_byte == &0xA {
-                break;
-            }
-        }
-        println!("first newline is at byte {first_http_response_byte_counter}");
-        println!("second newline is at byte {second_http_response_byte_counter}");
-
-        // cut the HTTP header out of the WARC body
-        // and, there is an error here to handle
-        &record
-            .body()
-            .get(first_http_response_byte_counter..second_http_response_byte_counter)
-            .unwrap()
     }
 
     fn process_record(
