@@ -40,8 +40,8 @@ pub struct CDXJIndexRecord {
     mime: String,     // The media type for the response payload
     filename: String, // the WARC file where the WARC record is located
     offset: usize,    // the byte offset for the WARC record
-    length: usize,   // the length in bytes of the WARC record
-    status: u16,   // the HTTP status code for the HTTP response
+    length: usize,    // the length in bytes of the WARC record
+    status: u16,      // the HTTP status code for the HTTP response
 }
 
 pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
@@ -131,7 +131,11 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
         println!("second newline is at byte {second_http_response_byte_counter}");
 
         // cut the HTTP header out of the WARC body
-        &record.body()[first_http_response_byte_counter..second_http_response_byte_counter]
+        // and, there is an error here to handle
+        &record
+            .body()
+            .get(first_http_response_byte_counter..second_http_response_byte_counter)
+            .unwrap()
     }
 
     fn process_record(
