@@ -1,5 +1,5 @@
-use core::error::Error;
 use core::str;
+use core::{error::Error, fmt};
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::BufReader;
@@ -11,29 +11,29 @@ use url::{Position, Url};
 use warc::{BufferedBody, Record, RecordIter, RecordType, WarcHeader, WarcReader};
 
 pub struct CDXJIndexRecord {
-    url: Url,         // The URL that was archived
-    digest: String,   // A cryptographic hash for the HTTP response payload
-    mime: String,     // The media type for the response payload
-    filename: String, // the WARC file where the WARC record is located
-    offset: usize,    // the byte offset for the WARC record
-    length: usize,    // the length in bytes of the WARC record
-    status: u16,      // the HTTP status code for the HTTP response
+    url: RecordUrl,       // The URL that was archived
+    digest: RecordDigest, // A cryptographic hash for the HTTP response payload
+    mime: String,         // The media type for the response payload
+    filename: String,     // the WARC file where the WARC record is located
+    offset: usize,        // the byte offset for the WARC record
+    length: usize,        // the length in bytes of the WARC record
+    status: u16,          // the HTTP status code for the HTTP response
 }
 
-pub struct WarcTimestamp(DateTime<chrono::FixedOffset>);
+pub struct RecordTimestamp(DateTime<chrono::FixedOffset>);
 
 #[derive(Debug)]
-pub struct WarcTimestampError;
+pub struct RecordTimestampError;
 
-impl WarcTimestamp {
-    pub fn new(record: &Record<BufferedBody>) -> Result<Self, WarcTimestampError> {
+impl RecordTimestamp {
+    pub fn new(record: &Record<BufferedBody>) -> Result<Self, RecordTimestampError> {
         if let Some(warc_header_date) = record.header(WarcHeader::Date) {
             Ok(Self(
                 // handle this error!
                 DateTime::parse_from_rfc3339(&warc_header_date).unwrap(),
             ))
         } else {
-            Err(WarcTimestampError)
+            Err(RecordTimestampError)
         }
     }
     pub fn into_string(self) -> String {
@@ -44,25 +44,46 @@ impl WarcTimestamp {
     }
 }
 
-pub struct WarcUrl(Url);
+#[derive(Debug)]
+pub struct RecordDigest(String);
 
 #[derive(Debug)]
-pub struct WarcUrlError;
+pub struct RecordDigestError;
 
-impl WarcUrl {
-    pub fn new(record: &Record<BufferedBody>) -> Result<Self, WarcUrlError> {
+impl RecordDigest {
+    pub fn new(record: &Record<BufferedBody>) -> Result<Self, RecordDigestError> {
+        if let Some(record_digest) = record.header(WarcHeader::PayloadDigest) {
+            Ok(Self(record_digest.to_string()))
+        } else {
+            Err(RecordDigestError)
+        }
+    }
+}
+impl fmt::Display for RecordDigest {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+pub struct RecordUrl(Url);
+
+#[derive(Debug)]
+pub struct RecordUrlError;
+
+impl RecordUrl {
+    pub fn new(record: &Record<BufferedBody>) -> Result<Self, RecordUrlError> {
         if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
             // propogate this error?
             Ok(Self(Url::parse(&warc_header_url).unwrap()))
         } else {
-            Err(WarcUrlError)
+            Err(RecordUrlError)
         }
     }
     pub fn into_lowercase_string(&self) -> String {
         let url_string: String = self.0.clone().into();
         url_string.to_lowercase()
     }
-    pub fn into_searchable_string(&self) -> Result<String, WarcUrlError> {
+    pub fn into_searchable_string(&self) -> Result<String, RecordUrlError> {
         if let Some(host) = self.0.host_str() {
             // split the host string into an array at each dot
             let mut host_split: Vec<&str> = host.split('.').collect();
@@ -75,7 +96,7 @@ impl WarcUrl {
             // put it all together
             Ok(format!("{host_reversed}){url_path}"))
         } else {
-            Err(WarcUrlError)
+            Err(RecordUrlError)
         }
     }
 }
@@ -200,28 +221,18 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 record.warc_id()
             );
 
-            let timestamp = WarcTimestamp::new(record).unwrap();
+            let timestamp = RecordTimestamp::new(record).unwrap();
             println!("warc timestamp is {}", timestamp.into_string());
 
-            let record_url = WarcUrl::new(record).unwrap();
+            let record_url = RecordUrl::new(record).unwrap();
             println!("url is            {}", &record_url.into_lowercase_string());
             println!(
                 "searchable url is {}",
                 &record_url.into_searchable_string().unwrap()
             );
 
-            if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
-                let json_url = &warc_header_url;
-                println!("record url is {json_url}");
-            } else {
-                println!("No url found in record, handle this error!");
-            }
-
-            if let Some(record_digest) = record.header(WarcHeader::PayloadDigest) {
-                println!("record digest is {record_digest}");
-            } else {
-                println!("No digest found in record, handle this error!");
-            }
+            let record_digest = RecordDigest::new(record).unwrap();
+            println!("record digest is  {}", record_digest);
 
             println!("offset is {}", byte_counter);
             println!("length is {}", record.content_length());
