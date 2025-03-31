@@ -44,6 +44,71 @@ pub struct CDXJIndexRecord {
     status: u16,      // the HTTP status code for the HTTP response
 }
 
+pub struct WarcTimestamp(DateTime<chrono::FixedOffset>);
+
+#[derive(Debug)]
+pub struct WarcTimestampError;
+
+impl WarcTimestamp {
+    pub fn new(record: &Record<BufferedBody>) -> Result<Self, WarcTimestampError> {
+        if let Some(warc_header_date) = record.header(WarcHeader::Date) {
+            Ok(Self(
+                // handle this error!
+                DateTime::parse_from_rfc3339(&warc_header_date).unwrap(),
+            ))
+        } else {
+            Err(WarcTimestampError)
+        }
+    }
+    pub fn into_string(self) -> String {
+        // Timestamp format from section 5 of the spec
+        // https://specs.webrecorder.net/cdxj/0.1.0/#timestamp
+        // is there an extra error to handle here?
+        self.0.format("%Y%m%d%H%M%S").to_string()
+    }
+}
+
+pub struct WarcUrl(Url);
+
+#[derive(Debug)]
+pub struct WarcUrlError;
+
+impl WarcUrl {
+    pub fn new(record: &Record<BufferedBody>) -> Result<Self, WarcUrlError> {
+        if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
+            // propogate this error?
+            Ok(Self(Url::parse(&warc_header_url).unwrap()))
+        } else {
+            Err(WarcUrlError)
+        }
+    }
+    pub fn into_lowercase_string(self) -> String {
+        let url_string: String = self.0.into();
+        url_string.to_lowercase()
+    }
+    // pub fn into_searchable_string(self) -> String {
+    //     match self {
+    //         Err(err) => Err(format!("Error parsing URL: {err}\r\n").into()),
+    //         Ok(successfully_parsed_url) => {
+    //             if let Some(host) = successfully_parsed_url.host_str() {
+    //                 // split the host string into an array at each dot
+    //                 let mut host_split: Vec<&str> = host.split('.').collect();
+    //                 // reverse the order of the array
+    //                 host_split.reverse();
+    //                 // join the array back into a comma-separated string
+    //                 let host_reversed = host_split.join(",");
+    //                 // capture everything else on the end of the url
+    //                 let url_path = &successfully_parsed_url[Position::BeforePath..];
+    //                 // put it all together
+    //                 let searchable_url = format!("{host_reversed}){url_path}");
+    //                 return Ok(searchable_url);
+    //             }
+    //             Err(format!("No hostname found in {lowercase_url}, handle this error!\r\n").into())
+    //         }
+    //     }
+    // }
+}
+
 fn cut_http_headers_from_record(record: &Record<BufferedBody>) -> &[u8] {
     // Find the position of the first newline, this will
     // get just the headers, not the full request, see
@@ -164,24 +229,8 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 record.warc_id()
             );
 
-            // Compose searchable url from WARC Header
-            if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
-                let searchable_url = create_searchable_url(&warc_header_url)?;
-                println!("searchable url is {searchable_url}");
-            } else {
-                println!("No url found in record, handle this error!");
-            }
-
-            // Compose timestamp from WARC header
-            if let Some(warc_header_date) = record.header(WarcHeader::Date) {
-                let parsed_datetime = DateTime::parse_from_rfc3339(&warc_header_date)?;
-                // Timestamp format from section 5 of the spec
-                // https://specs.webrecorder.net/cdxj/0.1.0/#timestamp
-                let timestamp = format!("{}", parsed_datetime.format("%Y%m%d%H%M%S"));
-                println!("timestamp is {timestamp}");
-            } else {
-                println!("No date found in record, handle this error!");
-            }
+            let timestamp = WarcTimestamp::new(record).unwrap();
+            println!("warc timestamp is {}", timestamp.into_string());
 
             if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
                 let json_url = &warc_header_url;
