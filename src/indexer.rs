@@ -40,8 +40,8 @@ pub struct CDXJIndexRecord {
     mime: String,     // The media type for the response payload
     filename: String, // the WARC file where the WARC record is located
     offset: usize,    // the byte offset for the WARC record
-    length: String,   // the length in bytes of the WARC record
-    status: String,   // the HTTP status code for the HTTP response
+    length: usize,   // the length in bytes of the WARC record
+    status: u16,   // the HTTP status code for the HTTP response
 }
 
 pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
@@ -200,6 +200,8 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
             // do anything about this we need to read
             // the record body
             let mime_type: &str = if record_type == &RecordType::Revisit {
+                // If the WARC record type is revisit,
+                // that's the content type
                 "revisit"
             } else {
                 // create a list of 64 empty headers, if this is not
