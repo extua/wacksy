@@ -10,30 +10,6 @@ use libflate::gzip::MultiDecoder;
 use url::{Position, Url};
 use warc::{BufferedBody, Record, RecordIter, RecordType, WarcHeader, WarcReader};
 
-fn create_searchable_url(url: &str) -> Result<String, Box<dyn Error + Send + Sync + 'static>> {
-    let lowercase_url = url.to_lowercase();
-    let parsed_url = Url::parse(&lowercase_url);
-    match parsed_url {
-        Err(err) => Err(format!("Error parsing URL: {err}\r\n").into()),
-        Ok(successfully_parsed_url) => {
-            if let Some(host) = successfully_parsed_url.host_str() {
-                // split the host string into an array at each dot
-                let mut host_split: Vec<&str> = host.split('.').collect();
-                // reverse the order of the array
-                host_split.reverse();
-                // join the array back into a comma-separated string
-                let host_reversed = host_split.join(",");
-                // capture everything else on the end of the url
-                let url_path = &successfully_parsed_url[Position::BeforePath..];
-                // put it all together
-                let searchable_url = format!("{host_reversed}){url_path}");
-                return Ok(searchable_url);
-            }
-            Err(format!("No hostname found in {lowercase_url}, handle this error!\r\n").into())
-        }
-    }
-}
-
 pub struct CDXJIndexRecord {
     url: Url,         // The URL that was archived
     digest: String,   // A cryptographic hash for the HTTP response payload
@@ -82,31 +58,26 @@ impl WarcUrl {
             Err(WarcUrlError)
         }
     }
-    pub fn into_lowercase_string(self) -> String {
-        let url_string: String = self.0.into();
+    pub fn into_lowercase_string(&self) -> String {
+        let url_string: String = self.0.clone().into();
         url_string.to_lowercase()
     }
-    // pub fn into_searchable_string(self) -> String {
-    //     match self {
-    //         Err(err) => Err(format!("Error parsing URL: {err}\r\n").into()),
-    //         Ok(successfully_parsed_url) => {
-    //             if let Some(host) = successfully_parsed_url.host_str() {
-    //                 // split the host string into an array at each dot
-    //                 let mut host_split: Vec<&str> = host.split('.').collect();
-    //                 // reverse the order of the array
-    //                 host_split.reverse();
-    //                 // join the array back into a comma-separated string
-    //                 let host_reversed = host_split.join(",");
-    //                 // capture everything else on the end of the url
-    //                 let url_path = &successfully_parsed_url[Position::BeforePath..];
-    //                 // put it all together
-    //                 let searchable_url = format!("{host_reversed}){url_path}");
-    //                 return Ok(searchable_url);
-    //             }
-    //             Err(format!("No hostname found in {lowercase_url}, handle this error!\r\n").into())
-    //         }
-    //     }
-    // }
+    pub fn into_searchable_string(&self) -> Result<String, WarcUrlError> {
+        if let Some(host) = self.0.host_str() {
+            // split the host string into an array at each dot
+            let mut host_split: Vec<&str> = host.split('.').collect();
+            // reverse the order of the array
+            host_split.reverse();
+            // join the array back into a comma-separated string
+            let host_reversed = host_split.join(",");
+            // capture everything else on the end of the url
+            let url_path = &self.0[Position::BeforePath..];
+            // put it all together
+            Ok(format!("{host_reversed}){url_path}"))
+        } else {
+            Err(WarcUrlError)
+        }
+    }
 }
 
 fn cut_http_headers_from_record(record: &Record<BufferedBody>) -> &[u8] {
@@ -231,6 +202,13 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
 
             let timestamp = WarcTimestamp::new(record).unwrap();
             println!("warc timestamp is {}", timestamp.into_string());
+
+            let record_url = WarcUrl::new(record).unwrap();
+            println!("url is            {}", &record_url.into_lowercase_string());
+            println!(
+                "searchable url is {}",
+                &record_url.into_searchable_string().unwrap()
+            );
 
             if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
                 let json_url = &warc_header_url;
