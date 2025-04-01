@@ -10,7 +10,6 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-    versioning-strategy: "widen"
     groups:
       minor-bumps:
         update-types:
