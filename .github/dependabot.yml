@@ -11,6 +11,11 @@ updates:
     schedule:
       interval: "monthly"
     versioning-strategy: "widen"
+    groups:
+      minor-bumps:
+        update-types:
+        - "minor"
+        - "patch"
       
   # Version updates for GitHub Actions
   - package-ecosystem: "github-actions"
