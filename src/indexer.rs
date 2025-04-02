@@ -11,13 +11,13 @@ use url::{Position, Url};
 use warc::{BufferedBody, Record, RecordIter, RecordType, WarcHeader, WarcReader};
 
 pub struct CDXJIndexRecord {
-    url: RecordUrl,       // The URL that was archived
-    digest: RecordDigest, // A cryptographic hash for the HTTP response payload
-    mime: String,         // The media type for the response payload
-    filename: String,     // the WARC file where the WARC record is located
-    offset: u64,          // the byte offset for the WARC record
-    length: u64,          // the length in bytes of the WARC record
-    status: u16,          // the HTTP status code for the HTTP response
+    pub url: RecordUrl,       // The URL that was archived
+    pub digest: RecordDigest, // A cryptographic hash for the HTTP response payload
+    pub mime: String,         // The media type for the response payload
+    pub filename: String,     // The WARC file where the WARC record is located
+    pub offset: u64,          // The byte offset for the WARC record
+    pub length: u64,          // The length in bytes of the WARC record
+    pub status: u16,          // The HTTP status code for the HTTP response
 }
 
 pub struct RecordTimestamp(DateTime<chrono::FixedOffset>);
@@ -41,6 +41,38 @@ impl RecordTimestamp {
         // https://specs.webrecorder.net/cdxj/0.1.0/#timestamp
         // is there an extra error to handle here?
         self.0.format("%Y%m%d%H%M%S").to_string()
+    }
+}
+
+pub struct WarcFilename(String);
+
+#[derive(Debug)]
+pub struct WarcFilenameError;
+
+impl WarcFilename {
+    pub fn new(
+        record: &Record<BufferedBody>,
+        warc_file_path: &Path,
+    ) -> Result<Self, WarcFilenameError> {
+        if let Some(record_filename) = record.header(WarcHeader::Filename) {
+            println!("record filename is {record_filename} from file");
+            Ok(Self(record_filename.into_owned()))
+        } else {
+            // If no filename is found in the record
+            // we get the filename from the file path
+            if let Some(warc_file_path) = warc_file_path.file_name() {
+                Ok(Self(warc_file_path.to_string_lossy().to_string()))
+            } else {
+                // Hit this error case if the filename
+                // cannot be inferred from the Path
+                Err(WarcFilenameError)
+            }
+        }
+    }
+}
+impl fmt::Display for WarcFilename {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -272,19 +304,19 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
 
         // first check whether the record is either
         // a response, revisit, resource, or metadata
-        let record_type: &warc::RecordType = record.warc_type();
         if [
             RecordType::Response,
             RecordType::Revisit,
             RecordType::Resource,
             RecordType::Metadata,
         ]
-        .contains(record_type)
+        .contains(record.warc_type())
         {
             println!("\n--------");
             println!(
-                "Processing record {} of type {record_type}",
-                record.warc_id()
+                "Processing record {} of type {}",
+                record.warc_id(),
+                record.warc_type()
             );
 
             let timestamp = RecordTimestamp::new(record).unwrap();
@@ -312,18 +344,8 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
             let header_status = RecordStatus::new(record).unwrap();
             println!("header status     {header_status}");
 
-            let filename: String =
-                if let Some(record_filename) = record.header(WarcHeader::Filename) {
-                    println!("record filename is {record_filename} from file");
-                    record_filename.into_owned()
-                } else {
-                    println!("No filename found in record, getting filename from path");
-                    let filename_os_string = warc_file_path.file_name().unwrap();
-                    let filename_str = filename_os_string.to_str().unwrap();
-                    filename_str.to_string()
-                };
-
-            println!("filename is {filename}");
+            let filename = WarcFilename::new(record, warc_file_path).unwrap();
+            println!("filename is       {filename}");
 
             println!("--------\n");
         }
