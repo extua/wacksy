@@ -15,8 +15,8 @@ pub struct CDXJIndexRecord {
     digest: RecordDigest, // A cryptographic hash for the HTTP response payload
     mime: String,         // The media type for the response payload
     filename: String,     // the WARC file where the WARC record is located
-    offset: usize,        // the byte offset for the WARC record
-    length: usize,        // the length in bytes of the WARC record
+    offset: u64,          // the byte offset for the WARC record
+    length: u64,          // the length in bytes of the WARC record
     status: u16,          // the HTTP status code for the HTTP response
 }
 
@@ -60,6 +60,42 @@ impl RecordDigest {
     }
 }
 impl fmt::Display for RecordDigest {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+pub struct RecordContentType(String);
+
+#[derive(Debug)]
+pub struct RecordContentTypeError;
+
+impl RecordContentType {
+    pub fn new(record: &Record<BufferedBody>) -> Self {
+        if record.warc_type() == &RecordType::Revisit {
+            // If the WARC record type is revisit,
+            // that's the content type
+            RecordContentType("revisit".to_owned())
+        } else {
+            // create a list of 64 empty headers, if this is not
+            // enough then you'll get a TooManyHeaders error
+            let mut headers = [httparse::EMPTY_HEADER; 64];
+            let header_byte_slice = cut_http_headers_from_record(record);
+            // parse the raw byte array with httparse, this adds
+            // data to the empty header list created above
+            httparse::parse_headers(header_byte_slice, &mut headers).unwrap();
+            // loop through the list of headers looking for the content-type
+            let mut content_type: &str = "";
+            for header in &headers {
+                if header.name == "content-type" {
+                    content_type = str::from_utf8(header.value).unwrap();
+                }
+            }
+            RecordContentType(content_type.to_owned())
+        }
+    }
+}
+impl fmt::Display for RecordContentType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -185,7 +221,8 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
             };
             process_record(&unwrapped_record, byte_counter, warc_file_path)?;
             // here we are getting the length of the unwrapped record header
-            // plus the record body
+            // plus the record body, maybe add wrapping_add and
+            // error handling here?
             let record_length: u64 = unwrapped_record.content_length()
                 + unwrapped_record.into_raw_parts().0.to_string().len() as u64;
             // increment the byte counter after processing the record
@@ -233,36 +270,15 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
 
             let record_digest = RecordDigest::new(record).unwrap();
             println!("record digest is  {}", record_digest);
-
-            println!("offset is {}", byte_counter);
-            println!("length is {}", record.content_length());
+            println!("offset is         {}", byte_counter);
+            println!("length is         {}", record.content_length());
 
             // beware! the warc content type is not the same
             // as the record content type in order to actually
             // do anything about this we need to read
             // the record body
-            let mime_type: &str = if record_type == &RecordType::Revisit {
-                // If the WARC record type is revisit,
-                // that's the content type
-                "revisit"
-            } else {
-                // create a list of 64 empty headers, if this is not
-                // enough then you'll get a TooManyHeaders error
-                let mut headers = [httparse::EMPTY_HEADER; 64];
-                let header_byte_slice = cut_http_headers_from_record(record);
-                // parse the raw byte array with httparse, this adds
-                // data to the empty header list created above
-                httparse::parse_headers(header_byte_slice, &mut headers).unwrap();
-                // loop through the list of headers looking for the content-type
-                let mut content_type: &str = "";
-                for header in &headers {
-                    if header.name == "content-type" {
-                        content_type = str::from_utf8(header.value).unwrap();
-                    }
-                }
-                content_type
-            };
-            println!("content type is {mime_type}");
+            let mime_type = RecordContentType::new(record);
+            println!("content type is  {mime_type}");
 
             // Cut a slice out from the record body from
             // byte 9 to byte 12, this should be the
