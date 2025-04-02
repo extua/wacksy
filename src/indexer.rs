@@ -75,7 +75,7 @@ impl RecordContentType {
         if record.warc_type() == &RecordType::Revisit {
             // If the WARC record type is revisit,
             // that's the content type
-            RecordContentType("revisit".to_owned())
+            Self("revisit".to_owned())
         } else {
             // create a list of 64 empty headers, if this is not
             // enough then you'll get a TooManyHeaders error
@@ -91,7 +91,7 @@ impl RecordContentType {
                     content_type = str::from_utf8(header.value).unwrap();
                 }
             }
-            RecordContentType(content_type.to_owned())
+            Self(content_type.to_owned())
         }
     }
 }
@@ -161,8 +161,6 @@ fn cut_http_headers_from_record(record: &Record<BufferedBody>) -> &[u8] {
             break;
         }
     }
-    println!("first newline is at byte {first_http_response_byte_counter}");
-    println!("second newline is at byte {second_http_response_byte_counter}");
 
     // cut the HTTP header out of the WARC body
     // and, there is an error here to handle
@@ -170,6 +168,37 @@ fn cut_http_headers_from_record(record: &Record<BufferedBody>) -> &[u8] {
         .body()
         .get(first_http_response_byte_counter..second_http_response_byte_counter)
         .unwrap()
+}
+
+#[derive(Debug)]
+pub struct RecordStatus(u16);
+
+#[derive(Debug)]
+pub struct RecordStatusError;
+
+impl RecordStatus {
+    pub fn new(record: &Record<BufferedBody>) -> Result<Self, RecordStatusError> {
+        // Cut a slice out from the record body from
+        // byte 9 to byte 12, this should be the
+        // status code
+        let header_byte_slice: &[u8] = &record.body()[9..12];
+        // Convert it to a string, if this doesn't work
+        // it'll produce unknown characters, this could
+        // be a properly-handled error?
+        let header_status = String::from_utf8_lossy(header_byte_slice);
+        // Parse it to a number, if there's an error it appears here!
+        // let header_status_int = header_status.parse::<u16>().unwrap();
+        if let Ok(header_status_int) = header_status.parse::<u16>() {
+            Ok(Self(header_status_int))
+        } else {
+            Err(RecordStatusError)
+        }
+    }
+}
+impl fmt::Display for RecordStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
 }
 
 pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
@@ -278,18 +307,10 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
             // do anything about this we need to read
             // the record body
             let mime_type = RecordContentType::new(record);
-            println!("content type is  {mime_type}");
+            println!("content type is   {mime_type}");
 
-            // Cut a slice out from the record body from
-            // byte 9 to byte 12, this should be the
-            // status code
-            let header_byte_slice: &[u8] = &record.body()[9..12];
-            // Convert it to a string, if this doesn't work
-            // it'll produce unknown characters
-            let header_status = String::from_utf8_lossy(header_byte_slice);
-            // Parse it to a number, if there's an error it appears here!
-            let header_status_int = header_status.parse::<u16>().unwrap();
-            println!("header status {header_status_int}");
+            let header_status = RecordStatus::new(record).unwrap();
+            println!("header status     {header_status}");
 
             let filename: String =
                 if let Some(record_filename) = record.header(WarcHeader::Filename) {
