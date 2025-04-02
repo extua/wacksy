@@ -38,11 +38,10 @@ impl RecordTimestamp {
             Err(RecordTimestampError)
         }
     }
-    pub fn into_string(self) -> String {
-        // Timestamp format from section 5 of the spec
-        // https://specs.webrecorder.net/cdxj/0.1.0/#timestamp
-        // is there an extra error to handle here?
-        self.0.format("%Y%m%d%H%M%S").to_string()
+}
+impl fmt::Display for RecordTimestamp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0.format("%Y%m%d%H%M%S"))
     }
 }
 
@@ -106,6 +105,10 @@ pub struct RecordContentTypeError;
 
 impl RecordContentType {
     pub fn new(record: &Record<BufferedBody>) -> Self {
+        // beware! the warc content type is not the same
+        // as the record content type in order to actually
+        // do anything about this we need to read
+        // the record body
         if record.warc_type() == &RecordType::Revisit {
             // If the WARC record type is revisit,
             // that's the content type
@@ -324,47 +327,34 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
             );
 
             let timestamp = RecordTimestamp::new(record).unwrap();
-            println!("warc timestamp is {}", timestamp.into_string());
-
-            let record_url = RecordUrl::new(record).unwrap();
-            println!("url is            {}", &record_url);
-            println!(
-                "searchable url is {}",
-                &record_url.into_searchable_string().unwrap()
-            );
-
-            let record_digest = RecordDigest::new(record).unwrap();
-            println!("record digest is  {}", record_digest);
-            println!("offset is         {}", byte_counter);
-            println!("length is         {}", record.content_length());
-
-            // beware! the warc content type is not the same
-            // as the record content type in order to actually
-            // do anything about this we need to read
-            // the record body
-            let mime_type = RecordContentType::new(record);
-            println!("content type is   {mime_type}");
-
-            let header_status = RecordStatus::new(record).unwrap();
-            println!("header status     {header_status}");
-
+            let url = RecordUrl::new(record).unwrap();
+            let digest = RecordDigest::new(record).unwrap();
+            let searchable_url = url.into_searchable_string().unwrap();
+            let mime = RecordContentType::new(record);
+            let status = RecordStatus::new(record).unwrap();
             let filename = WarcFilename::new(record, warc_file_path).unwrap();
-            println!("filename is       {filename}");
 
+            println!("warc timestamp is {timestamp}");
+            println!("url is            {url}");
+            println!("searchable url is {searchable_url}");
+            println!("record digest is  {digest}");
+            println!("offset is         {byte_counter}");
+            println!("length is         {}", record.content_length());
+            println!("content type is   {mime}");
+            println!("header status     {status}");
+            println!("filename is       {filename}");
             println!("--------\n");
 
-            let record_url = RecordUrl::new(record).unwrap();
-
             let record_object = CDXJIndexRecord {
-                timestamp: RecordTimestamp::new(record).unwrap(),
-                searchable_url: record_url.into_searchable_string().unwrap(),
-                url: record_url,
-                digest: RecordDigest::new(record).unwrap(),
-                mime: RecordContentType::new(record),
-                filename: WarcFilename::new(record, warc_file_path).unwrap(),
+                timestamp,
+                url,
+                searchable_url,
+                digest,
+                mime,
+                filename,
                 offset: byte_counter,
                 length: record.content_length(),
-                status: RecordStatus::new(record).unwrap(),
+                status,
             };
         }
 
