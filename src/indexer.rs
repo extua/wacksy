@@ -11,13 +11,15 @@ use url::{Position, Url};
 use warc::{BufferedBody, Record, RecordIter, RecordType, WarcHeader, WarcReader};
 
 pub struct CDXJIndexRecord {
-    pub url: RecordUrl,       // The URL that was archived
-    pub digest: RecordDigest, // A cryptographic hash for the HTTP response payload
-    pub mime: String,         // The media type for the response payload
-    pub filename: String,     // The WARC file where the WARC record is located
-    pub offset: u64,          // The byte offset for the WARC record
-    pub length: u64,          // The length in bytes of the WARC record
-    pub status: u16,          // The HTTP status code for the HTTP response
+    pub timestamp: RecordTimestamp,
+    pub searchable_url: String,
+    pub url: RecordUrl,          // The URL that was archived
+    pub digest: RecordDigest,    // A cryptographic hash for the HTTP response payload
+    pub mime: RecordContentType, // The media type for the response payload
+    pub filename: WarcFilename,  // The WARC file where the WARC record is located
+    pub offset: u64,             // The byte offset for the WARC record
+    pub length: u64,             // The length in bytes of the WARC record
+    pub status: RecordStatus,    // The HTTP status code for the HTTP response
 }
 
 pub struct RecordTimestamp(DateTime<chrono::FixedOffset>);
@@ -147,10 +149,6 @@ impl RecordUrl {
             Err(RecordUrlError)
         }
     }
-    pub fn into_lowercase_string(&self) -> String {
-        let url_string: String = self.0.clone().into();
-        url_string.to_lowercase()
-    }
     pub fn into_searchable_string(&self) -> Result<String, RecordUrlError> {
         if let Some(host) = self.0.host_str() {
             // split the host string into an array at each dot
@@ -166,6 +164,12 @@ impl RecordUrl {
         } else {
             Err(RecordUrlError)
         }
+    }
+}
+impl fmt::Display for RecordUrl {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let url_string: String = self.0.clone().into();
+        write!(f, "{}", url_string.to_lowercase())
     }
 }
 
@@ -323,7 +327,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
             println!("warc timestamp is {}", timestamp.into_string());
 
             let record_url = RecordUrl::new(record).unwrap();
-            println!("url is            {}", &record_url.into_lowercase_string());
+            println!("url is            {}", &record_url);
             println!(
                 "searchable url is {}",
                 &record_url.into_searchable_string().unwrap()
@@ -348,6 +352,20 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
             println!("filename is       {filename}");
 
             println!("--------\n");
+
+            let record_url = RecordUrl::new(record).unwrap();
+
+            let record_object = CDXJIndexRecord {
+                timestamp: RecordTimestamp::new(record).unwrap(),
+                searchable_url: record_url.into_searchable_string().unwrap(),
+                url: record_url,
+                digest: RecordDigest::new(record).unwrap(),
+                mime: RecordContentType::new(record),
+                filename: WarcFilename::new(record, warc_file_path).unwrap(),
+                offset: byte_counter,
+                length: record.content_length(),
+                status: RecordStatus::new(record).unwrap(),
+            };
         }
 
         Ok(())
