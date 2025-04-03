@@ -21,7 +21,17 @@ pub struct CDXJIndexRecord {
     pub length: u64,             // The length in bytes of the WARC record
     pub status: RecordStatus,    // The HTTP status code for the HTTP response
 }
+impl fmt::Debug for CDXJIndexRecord {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CDXJ Record")
+         .field("searchable url", &self.searchable_url)
+         .field("timestamp", &self.timestamp)
+        //  change this to just 'finish' when all fields can be shown
+         .finish_non_exhaustive()
+    }
+}
 
+#[derive(Debug)]
 pub struct RecordTimestamp(DateTime<chrono::FixedOffset>);
 
 #[derive(Debug)]
@@ -258,6 +268,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 }
                 Ok(record) => record,
             };
+            // Need to be able to skip the record here
             process_record(&unwrapped_record, byte_counter, warc_file_path)?;
             // here we are getting the length of the unwrapped record header
             // plus the record body
@@ -304,11 +315,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
         record: &Record<BufferedBody>,
         byte_counter: u64,
         warc_file_path: &Path,
-    ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
-        // use something like a control flow enum to
-        // organise this
-        // https://doc.rust-lang.org/stable/std/ops/enum.ControlFlow.html
-
+    ) -> Result<CDXJIndexRecord, Box<dyn Error + Send + Sync + 'static>> {
         // first check whether the record is either
         // a response, revisit, resource, or metadata
         if [
@@ -326,6 +333,9 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 record.warc_type()
             );
 
+            // use something like a control flow enum to
+            // organise this
+            // https://doc.rust-lang.org/stable/std/ops/enum.ControlFlow.html
             let timestamp = RecordTimestamp::new(record).unwrap();
             let url = RecordUrl::new(record).unwrap();
             let digest = RecordDigest::new(record).unwrap();
@@ -345,7 +355,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
             println!("filename is       {filename}");
             println!("--------\n");
 
-            let record_object = CDXJIndexRecord {
+            let parsed_record = CDXJIndexRecord {
                 timestamp,
                 url,
                 searchable_url,
@@ -356,9 +366,12 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 length: record.content_length(),
                 status,
             };
+            println!("{parsed_record:?}");
+            Ok(parsed_record)
+        } else {
+            // Better error message here!
+            Err("Unable to process the record".into())
         }
-
-        Ok(())
     }
 
     if warc_file_path.extension() == Some(OsStr::new("gz")) {
