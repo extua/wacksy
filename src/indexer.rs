@@ -10,6 +10,7 @@ use libflate::gzip::MultiDecoder;
 use url::{Position, Url};
 use warc::{BufferedBody, Record, RecordIter, RecordType, WarcHeader, WarcReader};
 
+#[derive(Debug)]
 pub struct CDXJIndexRecord {
     pub timestamp: RecordTimestamp,
     pub searchable_url: String,
@@ -20,15 +21,6 @@ pub struct CDXJIndexRecord {
     pub offset: u64,             // The byte offset for the WARC record
     pub length: u64,             // The length in bytes of the WARC record
     pub status: RecordStatus,    // The HTTP status code for the HTTP response
-}
-impl fmt::Debug for CDXJIndexRecord {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("CDXJ Record")
-         .field("searchable url", &self.searchable_url)
-         .field("timestamp", &self.timestamp)
-        //  change this to just 'finish' when all fields can be shown
-         .finish_non_exhaustive()
-    }
 }
 
 #[derive(Debug)]
@@ -55,6 +47,7 @@ impl fmt::Display for RecordTimestamp {
     }
 }
 
+#[derive(Debug)]
 pub struct WarcFilename(String);
 
 #[derive(Debug)]
@@ -108,6 +101,7 @@ impl fmt::Display for RecordDigest {
     }
 }
 
+#[derive(Debug)]
 pub struct RecordContentType(String);
 
 #[derive(Debug)]
@@ -148,6 +142,7 @@ impl fmt::Display for RecordContentType {
     }
 }
 
+#[derive(Debug)]
 pub struct RecordUrl(Url);
 
 #[derive(Debug)]
