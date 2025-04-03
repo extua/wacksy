@@ -269,7 +269,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 Ok(record) => record,
             };
             // Need to be able to skip the record here
-            process_record(&unwrapped_record, byte_counter, warc_file_path)?;
+            process_record(&unwrapped_record, byte_counter, warc_file_path);
             // here we are getting the length of the unwrapped record header
             // plus the record body
             let record_length: u64 = unwrapped_record.content_length()
@@ -298,7 +298,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 }
                 Ok(record) => record,
             };
-            process_record(&unwrapped_record, byte_counter, warc_file_path)?;
+            process_record(&unwrapped_record, byte_counter, warc_file_path);
             // here we are getting the length of the unwrapped record header
             // plus the record body, maybe add wrapping_add and
             // error handling here?
@@ -315,7 +315,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
         record: &Record<BufferedBody>,
         byte_counter: u64,
         warc_file_path: &Path,
-    ) -> Result<CDXJIndexRecord, Box<dyn Error + Send + Sync + 'static>> {
+    ) -> Option<CDXJIndexRecord> {
         // first check whether the record is either
         // a response, revisit, resource, or metadata
         if [
@@ -367,10 +367,10 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 status,
             };
             println!("{parsed_record:?}");
-            Ok(parsed_record)
+            Some(parsed_record)
         } else {
             // Better error message here!
-            Err("Unable to process the record".into())
+            None
         }
     }
 
