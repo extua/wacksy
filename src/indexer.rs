@@ -22,6 +22,26 @@ pub struct CDXJIndexRecord {
     pub length: u64,             // The length in bytes of the WARC record
     pub status: RecordStatus,    // The HTTP status code for the HTTP response
 }
+// Display the record as shown in the example in the
+// spec https://specs.webrecorder.net/cdxj/0.1.0/#example
+// Could there be a better way to serialize this?
+impl fmt::Display for CDXJIndexRecord {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{} {} {{\"url\":\"{}\",\"digest\":\"{}\",\"mime\":\"{}\",\"offset\":{},\"length\":{},\"status\":{},\"filename\":\"{}\"}}",
+            self.searchable_url,
+            self.timestamp,
+            self.url,
+            self.digest,
+            self.mime,
+            self.offset,
+            self.length,
+            self.status,
+            self.filename
+        )
+    }
+}
 
 #[derive(Debug)]
 pub struct RecordTimestamp(DateTime<chrono::FixedOffset>);
@@ -321,13 +341,6 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
         ]
         .contains(record.warc_type())
         {
-            println!("\n--------");
-            println!(
-                "Processing record {} of type {}",
-                record.warc_id(),
-                record.warc_type()
-            );
-
             // use something like a control flow enum to
             // organise this
             // https://doc.rust-lang.org/stable/std/ops/enum.ControlFlow.html
@@ -338,17 +351,6 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
             let mime = RecordContentType::new(record);
             let status = RecordStatus::new(record).unwrap();
             let filename = WarcFilename::new(record, warc_file_path).unwrap();
-
-            println!("warc timestamp is {timestamp}");
-            println!("url is            {url}");
-            println!("searchable url is {searchable_url}");
-            println!("record digest is  {digest}");
-            println!("offset is         {byte_counter}");
-            println!("length is         {}", record.content_length());
-            println!("content type is   {mime}");
-            println!("header status     {status}");
-            println!("filename is       {filename}");
-            println!("--------\n");
 
             let parsed_record = CDXJIndexRecord {
                 timestamp,
@@ -361,7 +363,7 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 length: record.content_length(),
                 status,
             };
-            println!("{parsed_record:?}");
+            println!("parsed record is {parsed_record}\n");
             Some(parsed_record)
         } else {
             // Better error message here!
