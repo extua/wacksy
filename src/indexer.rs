@@ -10,6 +10,15 @@ use libflate::gzip::MultiDecoder;
 use url::{Position, Url};
 use warc::{BufferedBody, Record, RecordIter, RecordType, WarcHeader, WarcReader};
 
+// At some point in future I want to
+// return a CDXJIndex struct from compose_index
+// pub struct CDXJIndex(Vec<CDXJIndexRecord>);
+// impl CDXJIndex {
+//     pub fn new() -> Self {
+//         Self(Vec::with_capacity(8))
+//     }
+// }
+
 #[derive(Debug)]
 pub struct CDXJIndexRecord {
     pub timestamp: RecordTimestamp,
@@ -265,13 +274,16 @@ impl fmt::Display for RecordStatus {
     }
 }
 
-pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+pub fn compose_index(
+    warc_file_path: &Path,
+) -> Result<Vec<u8>, Box<dyn Error + Send + Sync + 'static>> {
     fn process_records_gzip(
         file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>>,
         warc_file_path: &Path,
-    ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+    ) -> Result<Vec<u8>, Box<dyn Error + Send + Sync + 'static>> {
         let mut record_count: u16 = 0u16;
         let mut byte_counter: u64 = 0u64;
+        let mut index: Vec<u8> = Vec::with_capacity(128);
         for record in file_records {
             record_count = record_count.wrapping_add(1);
             let unwrapped_record: Record<BufferedBody> = match record {
@@ -284,7 +296,15 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 Ok(record) => record,
             };
             // Need to be able to skip the record here
-            process_record(&unwrapped_record, byte_counter, warc_file_path);
+            // add this to a bufwriter
+            if let Some(processed_record) =
+                process_record(&unwrapped_record, byte_counter, warc_file_path)
+            {
+                let record_some = processed_record;
+                let record_bytes = record_some.as_bytes();
+                index.extend_from_slice(record_bytes);
+            }
+
             // here we are getting the length of the unwrapped record header
             // plus the record body
             let record_length: u64 = unwrapped_record.content_length()
@@ -293,15 +313,16 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
             byte_counter = byte_counter.wrapping_add(record_length);
         }
         println!("Total records: {record_count}");
-        Ok(())
+        Ok(index)
     }
 
     fn process_records_not_gzip(
         file_records: RecordIter<BufReader<File>>,
         warc_file_path: &Path,
-    ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+    ) -> Result<Vec<u8>, Box<dyn Error + Send + Sync + 'static>> {
         let mut record_count: u16 = 0u16;
         let mut byte_counter: u64 = 0u64;
+        let mut index: Vec<u8> = Vec::with_capacity(128);
         for record in file_records {
             record_count = record_count.wrapping_add(1);
             let unwrapped_record: Record<BufferedBody> = match record {
@@ -309,28 +330,36 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                     // Any error with the record here
                     // affects the offset counter, so
                     // can't index the file!
-                    panic!("Unable to index file ???. Record error: {err}\r\n");
+                    panic!("Unable to index file. Record error: {err}\r\n");
                 }
                 Ok(record) => record,
             };
-            process_record(&unwrapped_record, byte_counter, warc_file_path);
+            // Need to be able to skip the record here
+            // add this to a bufwriter
+            if let Some(processed_record) =
+                process_record(&unwrapped_record, byte_counter, warc_file_path)
+            {
+                let record_some = processed_record;
+                let record_bytes = record_some.as_bytes();
+                index.extend_from_slice(record_bytes);
+            }
+
             // here we are getting the length of the unwrapped record header
-            // plus the record body, maybe add wrapping_add and
-            // error handling here?
+            // plus the record body
             let record_length: u64 = unwrapped_record.content_length()
                 + unwrapped_record.into_raw_parts().0.to_string().len() as u64;
             // increment the byte counter after processing the record
             byte_counter = byte_counter.wrapping_add(record_length);
         }
         println!("Total records: {record_count}");
-        Ok(())
+        Ok(index)
     }
 
     fn process_record(
         record: &Record<BufferedBody>,
         byte_counter: u64,
         warc_file_path: &Path,
-    ) -> Option<CDXJIndexRecord> {
+    ) -> Option<String> {
         // first check whether the record is either
         // a response, revisit, resource, or metadata
         if [
@@ -363,25 +392,25 @@ pub fn compose_index(warc_file_path: &Path) -> Result<(), Box<dyn Error + Send +
                 length: record.content_length(),
                 status,
             };
-            println!("parsed record is {parsed_record}\n");
-            Some(parsed_record)
+            // println!("parsed record is {parsed_record}\n");
+            Some(parsed_record.to_string())
         } else {
             // Better error message here!
             None
         }
     }
 
-    if warc_file_path.extension() == Some(OsStr::new("gz")) {
+    let index = if warc_file_path.extension() == Some(OsStr::new("gz")) {
         let file_gzip: WarcReader<BufReader<MultiDecoder<BufReader<File>>>> =
             WarcReader::from_path_gzip(warc_file_path)?;
         let file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>> =
             file_gzip.iter_records();
-        process_records_gzip(file_records, warc_file_path)?;
+        process_records_gzip(file_records, warc_file_path)?
     } else {
         let file_not_gzip: WarcReader<BufReader<File>> = WarcReader::from_path(warc_file_path)?;
         let file_records: RecordIter<BufReader<File>> = file_not_gzip.iter_records();
-        process_records_not_gzip(file_records, warc_file_path)?;
+        process_records_not_gzip(file_records, warc_file_path)?
     };
 
-    Ok(())
+    Ok(index)
 }

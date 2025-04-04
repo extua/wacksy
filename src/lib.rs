@@ -11,4 +11,5 @@ pub struct Wacz {
     pub warc_file: Vec<u8>,
     pub data_package_bytes: Vec<u8>,
     pub data_package_digest_bytes: Vec<u8>,
+    pub index_bytes: Vec<u8>,
 }

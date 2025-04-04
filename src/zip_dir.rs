@@ -58,6 +58,12 @@ pub fn zip_dir(wacz_object: &Wacz) -> Result<Vec<u8>, Error> {
         &wacz_object.data_package_digest_bytes,
         "datapackage-digest.json",
     );
+    add_file_to_archive(
+        &mut archive,
+        options,
+        &wacz_object.index_bytes,
+        "indexes/index.cdx",
+    );
 
     // Finish the archive, which will write the central directory.
     archive.finish()?;
