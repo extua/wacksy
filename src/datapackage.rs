@@ -88,12 +88,18 @@ impl DataPackageResource {
     }
 }
 
-pub fn compose_datapackage(warc_file: &[u8]) -> DataPackage {
+pub fn compose_datapackage(warc_file: &[u8], index_file: &[u8]) -> DataPackage {
     let mut data_package = DataPackage::new();
 
     // this _could_ be a loop, with more things
+    // add warc file to datapackage
     let path: &Path = Path::new("archive/data.warc");
     let resource = DataPackageResource::new(path, warc_file);
+    DataPackage::add_resource(&mut data_package, resource);
+
+    // add index file to datapackage
+    let path: &Path = Path::new("indexes/index.cdxj");
+    let resource = DataPackageResource::new(path, index_file);
     DataPackage::add_resource(&mut data_package, resource);
 
     data_package
