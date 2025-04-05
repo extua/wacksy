@@ -6,7 +6,7 @@ rust-version = "1.85"
 license = "MIT"
 repository = "https://github.com/extua/wacksy"
 description = "Experimental library for writing WACZ achives."
-keywords = ["save-the-internet", "web-archive", "wacz"]
+keywords = ["save-the-internet", "web-archive", "wacz", "warc", "cdxj"]
 categories = ["encoding"]
 
 [dependencies]

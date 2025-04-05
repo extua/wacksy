@@ -15,7 +15,8 @@ abstract: 'An experimental library for reading and writing WACZ files.'
 keywords:
   - wacz
   - warc
+  - cdxj
   - archive
 license: MIT
-version: 0.1.0
-# date-released: 2025-03-11
+version: 0.0.1-alpha
+date-released: 2025-04-05
