@@ -1,12 +1,13 @@
 [package]
 name = "wacksy"
-version = "0.1.0"
+version = "0.0.1-alpha"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
-authors = ["Pierre Marshall <pierre.marshall@bodleian.ox.ac.uk>"]
 repository = "https://github.com/extua/wacksy"
 description = "Experimental library for writing WACZ achives."
+keywords = ["save-the-internet", "web-archive", "wacz"]
+categories = ["encoding"]
 
 [dependencies]
 chrono = { version = "0.4.40", features = ["alloc"] }
@@ -20,4 +21,3 @@ url = "2.5.4"
 warc = { git = "https://github.com/extua/warc_reader_patch.git", features = [
     "gzip",
 ] }
-# warc = { path = "../warc_reader_patch", features = ["gzip"] }
