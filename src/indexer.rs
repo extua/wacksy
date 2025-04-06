@@ -36,9 +36,9 @@ pub struct CDXJIndexRecord {
 // Could there be a better way to serialize this?
 impl fmt::Display for CDXJIndexRecord {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
+        writeln!(
             f,
-            "{} {} {{\"url\":\"{}\",\"digest\":\"{}\",\"mime\":\"{}\",\"offset\":{},\"length\":{},\"status\":{},\"filename\":\"{}\"}}\n",
+            "{} {} {{\"url\":\"{}\",\"digest\":\"{}\",\"mime\":\"{}\",\"offset\":{},\"length\":{},\"status\":{},\"filename\":\"{}\"}}",
             self.searchable_url,
             self.timestamp,
             self.url,
