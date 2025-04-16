@@ -2,7 +2,11 @@ use std::{fs, path::Path};
 use wacksy::{DataPackage, Wacz, compose_datapackage, compose_index, zip_dir};
 
 fn main() {
-    let warc_file_path: &Path = Path::new("examples/warc_example.warc");
+    let warc_file_path: &Path = Path::new(
+        // "../warc_examples/ARCHIVEIT-2502-MONTHLY-JOB2533941-SEED1071647-20250401082651721-00001-h3.warc.gz",
+        "../warc_examples/example_1.warc",
+    );
+
     let warc_file = fs::read(warc_file_path).unwrap();
 
     let index_bytes = match compose_index(warc_file_path) {

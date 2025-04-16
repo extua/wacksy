@@ -80,7 +80,10 @@ pub fn compose_index(
                     let record_bytes = record_some.as_bytes();
                     index.extend_from_slice(record_bytes);
                 }
-                Err(err) => eprintln!("Skipping record {} because {err}",unwrapped_record.warc_id()),
+                Err(err) => eprintln!(
+                    "Skipping record {} because {err}",
+                    unwrapped_record.warc_id()
+                ),
             }
 
             // here we are getting the length of the unwrapped record header
@@ -106,7 +109,7 @@ pub fn compose_index(
         let url = RecordUrl::new(record)?;
         let digest = RecordDigest::new(record).unwrap();
         let searchable_url = url.into_searchable_string().unwrap();
-        let mime = RecordContentType::new(record);
+        let mime = RecordContentType::new(record)?;
         let status = RecordStatus::new(record)?;
         let filename = WarcFilename::new(record, warc_file_path).unwrap();
 

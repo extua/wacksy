@@ -4,6 +4,7 @@ use std::error::Error;
 use std::path::Path;
 
 use chrono::DateTime;
+use url::ParseError;
 use url::Position;
 use url::Url;
 use warc::{BufferedBody, Record, RecordType, WarcHeader};
@@ -128,90 +129,6 @@ impl fmt::Display for RecordDigest {
     }
 }
 
-#[derive(Debug)]
-pub struct RecordContentType(String);
-
-#[derive(Debug)]
-pub struct RecordContentTypeError;
-
-impl RecordContentType {
-    pub fn new(record: &Record<BufferedBody>) -> Self {
-        // beware! the warc content type is not the same
-        // as the record content type in order to actually
-        // do anything about this we need to read
-        // the record body
-        if record.warc_type() == &RecordType::Revisit {
-            // If the WARC record type is revisit,
-            // that's the content type
-            Self("revisit".to_owned())
-        } else {
-            // create a list of 64 empty headers, if this is not
-            // enough then you'll get a TooManyHeaders error
-            let mut headers = [httparse::EMPTY_HEADER; 64];
-            let header_byte_slice = cut_http_headers_from_record(record);
-            // parse the raw byte array with httparse, this adds
-            // data to the empty header list created above
-            httparse::parse_headers(header_byte_slice, &mut headers).unwrap();
-            // loop through the list of headers looking for the content-type
-            let mut content_type: &str = "";
-            for header in &headers {
-                if header.name == "content-type" {
-                    content_type = str::from_utf8(header.value).unwrap();
-                }
-            }
-            Self(content_type.to_owned())
-        }
-    }
-}
-impl fmt::Display for RecordContentType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[derive(Debug)]
-pub struct RecordUrl(Url);
-
-impl RecordUrl {
-    pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
-        if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
-            // propogate this error?
-            Ok(Self(Url::parse(&warc_header_url).unwrap()))
-        } else {
-            Err(CDXJIndexRecordError::ValueNotFound(format!(
-                "Record {} does not have a url in the WARC header",
-                record.warc_id()
-            )))
-        }
-    }
-    pub fn into_searchable_string(&self) -> Result<String, CDXJIndexRecordError> {
-        if let Some(host) = self.0.host_str() {
-            // split the host string into an array at each dot
-            let mut host_split: Vec<&str> = host.split('.').collect();
-            // reverse the order of the array
-            host_split.reverse();
-            // join the array back into a comma-separated string
-            let host_reversed = host_split.join(",");
-            // capture everything else on the end of the url
-            let url_path = &self.0[Position::BeforePath..];
-            // put it all together
-            Ok(format!("{host_reversed}){url_path}"))
-        } else {
-            // print the full url here
-            Err(CDXJIndexRecordError::ValueNotFound(format!(
-                "Unable to construct a searchable string from {}",
-                self.0
-            )))
-        }
-    }
-}
-impl fmt::Display for RecordUrl {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let url_string: String = self.0.clone().into();
-        write!(f, "{}", url_string.to_lowercase())
-    }
-}
-
 fn cut_http_headers_from_record(record: &Record<BufferedBody>) -> &[u8] {
     // Find the position of the first newline, this will
     // get just the headers, not the full request, see
@@ -246,6 +163,101 @@ fn cut_http_headers_from_record(record: &Record<BufferedBody>) -> &[u8] {
 }
 
 #[derive(Debug)]
+pub struct RecordContentType(String);
+
+impl RecordContentType {
+    pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
+        // beware! the warc content type is not the same
+        // as the record content type in order to actually
+        // do anything about this we need to read
+        // the record body
+        if record.warc_type() == &RecordType::Revisit {
+            // If the WARC record type is revisit,
+            // that's the content type
+            Ok(Self("revisit".to_owned()))
+        } else {
+            // create a list of 64 empty headers, if this is not
+            // enough then you'll get a TooManyHeaders error
+            let mut headers = [httparse::EMPTY_HEADER; 64];
+            let header_byte_slice = cut_http_headers_from_record(record);
+            // parse the raw byte array with httparse, this adds
+            // data to the empty header list created above
+            httparse::parse_headers(header_byte_slice, &mut headers).unwrap();
+            // loop through the list of headers looking for the content-type
+            let mut content_type: Option<Result<&str, std::str::Utf8Error>> = None;
+            for header in &headers {
+                if header.name == "content-type" {
+                    content_type = Some(str::from_utf8(header.value));
+                    break;
+                }
+            }
+            if let Some(content_type) = content_type {
+                match content_type {
+                    Ok(content_type) => Ok(Self(content_type.to_owned())),
+                    Err(parsing_error) => Err(CDXJIndexRecordError::RecordContentTypeError(
+                        parsing_error.to_string(),
+                    )),
+                }
+            } else {
+                Err(CDXJIndexRecordError::ValueNotFound(
+                    "could not find content type in headers".to_owned(),
+                ))
+            }
+        }
+    }
+}
+impl fmt::Display for RecordContentType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Debug)]
+pub struct RecordUrl(Url);
+
+impl RecordUrl {
+    pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
+        if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
+            match Url::parse(&warc_header_url) {
+                Ok(record_url) => Ok(Self(record_url)),
+                Err(parse_error) => Err(CDXJIndexRecordError::RecordUrlError(parse_error)),
+            }
+        } else {
+            Err(CDXJIndexRecordError::ValueNotFound(format!(
+                "Record {} does not have a url in the WARC header",
+                record.warc_id()
+            )))
+        }
+    }
+    pub fn into_searchable_string(&self) -> Result<String, CDXJIndexRecordError> {
+        if let Some(host) = self.0.host_str() {
+            // split the host string into an array at each dot
+            let mut host_split: Vec<&str> = host.split('.').collect();
+            // reverse the order of the array
+            host_split.reverse();
+            // join the array back into a comma-separated string
+            let host_reversed = host_split.join(",");
+            // capture everything else on the end of the url
+            let url_path = &self.0[Position::BeforePath..];
+            // put it all together
+            Ok(format!("{host_reversed}){url_path}"))
+        } else {
+            // print the full url here
+            let url = self.0.as_str();
+            Err(CDXJIndexRecordError::ValueNotFound(format!(
+                "Unable to construct a searchable string from {url}"
+            )))
+        }
+    }
+}
+impl fmt::Display for RecordUrl {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let url_string: String = self.0.clone().into();
+        write!(f, "{}", url_string.to_lowercase())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RecordStatus(u16);
 
 impl RecordStatus {
@@ -273,15 +285,22 @@ impl fmt::Display for RecordStatus {
 
 #[derive(Debug)]
 pub enum CDXJIndexRecordError {
-    // RecordUrlError(),
+    RecordUrlError(url::ParseError),
     RecordStatusError(std::num::ParseIntError),
+    RecordContentTypeError(String),
     ValueNotFound(String),
 }
 impl std::fmt::Display for CDXJIndexRecordError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            CDXJIndexRecordError::RecordUrlError(e) => {
+                write!(f, "Could not parse url {}", e)
+            }
             CDXJIndexRecordError::RecordStatusError(e) => {
                 write!(f, "Could not parse HTTP status from {}", e)
+            }
+            CDXJIndexRecordError::RecordContentTypeError(s) => {
+                write!(f, "Could not parse record content type {}", s)
             }
             CDXJIndexRecordError::ValueNotFound(s) => write!(f, "General error: {}", s),
         }
@@ -295,7 +314,9 @@ impl From<std::num::ParseIntError> for CDXJIndexRecordError {
 impl Error for CDXJIndexRecordError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            CDXJIndexRecordError::RecordUrlError(parse_error) => todo!(),
             CDXJIndexRecordError::RecordStatusError(e) => Some(e),
+            CDXJIndexRecordError::RecordContentTypeError(s) => todo!(),
             CDXJIndexRecordError::ValueNotFound(_) => None,
         }
     }
