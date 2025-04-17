@@ -108,7 +108,7 @@ pub fn compose_index(
         let timestamp = RecordTimestamp::new(record).unwrap();
         let url = RecordUrl::new(record)?;
         let digest = RecordDigest::new(record).unwrap();
-        let searchable_url = url.into_searchable_string().unwrap();
+        let searchable_url = url.as_searchable_string().unwrap();
         let mime = RecordContentType::new(record)?;
         let status = RecordStatus::new(record)?;
         let filename = WarcFilename::new(record, warc_file_path).unwrap();

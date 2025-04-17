@@ -4,7 +4,6 @@ use std::error::Error;
 use std::path::Path;
 
 use chrono::DateTime;
-use url::ParseError;
 use url::Position;
 use url::Url;
 use warc::{BufferedBody, Record, RecordType, WarcHeader};
@@ -229,7 +228,7 @@ impl RecordUrl {
             )))
         }
     }
-    pub fn into_searchable_string(&self) -> Result<String, CDXJIndexRecordError> {
+    pub fn as_searchable_string(&self) -> Result<String, CDXJIndexRecordError> {
         if let Some(host) = self.0.host_str() {
             // split the host string into an array at each dot
             let mut host_split: Vec<&str> = host.split('.').collect();
@@ -296,8 +295,8 @@ impl std::fmt::Display for CDXJIndexRecordError {
             CDXJIndexRecordError::RecordUrlError(e) => {
                 write!(f, "Could not parse url {}", e)
             }
-            CDXJIndexRecordError::RecordStatusError(e) => {
-                write!(f, "Could not parse HTTP status from {}", e)
+            CDXJIndexRecordError::RecordStatusError(parse_int_error) => {
+                write!(f, "Could not parse HTTP status from {}", parse_int_error)
             }
             CDXJIndexRecordError::RecordContentTypeError(s) => {
                 write!(f, "Could not parse record content type {}", s)
@@ -306,17 +305,17 @@ impl std::fmt::Display for CDXJIndexRecordError {
         }
     }
 }
-impl From<std::num::ParseIntError> for CDXJIndexRecordError {
-    fn from(e: std::num::ParseIntError) -> Self {
-        Self::RecordStatusError(e)
-    }
-}
+// impl From<std::num::ParseIntError> for CDXJIndexRecordError {
+//     fn from(e: std::num::ParseIntError) -> Self {
+//         Self::RecordStatusError(e)
+//     }
+// }
 impl Error for CDXJIndexRecordError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            CDXJIndexRecordError::RecordUrlError(parse_error) => todo!(),
-            CDXJIndexRecordError::RecordStatusError(e) => Some(e),
-            CDXJIndexRecordError::RecordContentTypeError(s) => todo!(),
+            CDXJIndexRecordError::RecordUrlError(parse_error) => Some(parse_error),
+            CDXJIndexRecordError::RecordStatusError(parse_int_error) => Some(parse_int_error),
+            CDXJIndexRecordError::RecordContentTypeError(_) => None,
             CDXJIndexRecordError::ValueNotFound(_) => None,
         }
     }
