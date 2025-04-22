@@ -185,7 +185,15 @@ impl RecordContentType {
             let header_byte_slice = cut_http_headers_from_record(record);
             // parse the raw byte array with httparse, this adds
             // data to the empty header list created above
-            httparse::parse_headers(header_byte_slice, &mut headers)?;
+
+            match httparse::parse_headers(header_byte_slice, &mut headers) {
+                Ok(headers) => headers,
+                Err(http_parsing_error) => {
+                    return Err(CDXJIndexRecordError::RecordContentTypeError(
+                        http_parsing_error.to_string(),
+                    ));
+                }
+            };
 
             // loop through the list of headers looking for the content-type
             let mut content_type: Option<Result<&str, std::str::Utf8Error>> = None;
@@ -318,11 +326,6 @@ impl std::fmt::Display for CDXJIndexRecordError {
                 write!(f, "Value not found: {error_message}")
             }
         }
-    }
-}
-impl From<httparse::Error> for CDXJIndexRecordError {
-    fn from(http_parse_error: httparse::Error) -> Self {
-        Self::RecordContentTypeError(http_parse_error.to_string())
     }
 }
 impl Error for CDXJIndexRecordError {
