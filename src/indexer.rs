@@ -105,13 +105,13 @@ pub fn compose_index(
         // use something like a control flow enum to
         // organise this
         // https://doc.rust-lang.org/stable/std/ops/enum.ControlFlow.html
-        let timestamp = RecordTimestamp::new(record).unwrap();
+        let timestamp = RecordTimestamp::new(record)?;
         let url = RecordUrl::new(record)?;
-        let digest = RecordDigest::new(record).unwrap();
-        let searchable_url = url.as_searchable_string().unwrap();
+        let digest = RecordDigest::new(record)?;
+        let searchable_url = url.as_searchable_string()?;
         let mime = RecordContentType::new(record)?;
         let status = RecordStatus::new(record)?;
-        let filename = WarcFilename::new(record, warc_file_path).unwrap();
+        let filename = WarcFilename::new(record, warc_file_path)?;
 
         // first check whether the record is either
         // a response, revisit, resource, or metadata
