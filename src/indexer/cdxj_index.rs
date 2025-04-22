@@ -53,18 +53,22 @@ impl fmt::Display for CDXJIndexRecord {
 #[derive(Debug)]
 pub struct RecordTimestamp(DateTime<chrono::FixedOffset>);
 
-#[derive(Debug)]
-pub struct RecordTimestampError;
-
 impl RecordTimestamp {
-    pub fn new(record: &Record<BufferedBody>) -> Result<Self, RecordTimestampError> {
+    pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
         if let Some(warc_header_date) = record.header(WarcHeader::Date) {
-            Ok(Self(
-                // handle this error!
-                DateTime::parse_from_rfc3339(&warc_header_date).unwrap(),
-            ))
+            let parsed_datetime: Result<DateTime<chrono::FixedOffset>, chrono::ParseError> =
+                DateTime::parse_from_rfc3339(&warc_header_date);
+            match parsed_datetime {
+                Ok(parsed_datetime) => Ok(Self(parsed_datetime)),
+                Err(parsing_error) => {
+                    Err(CDXJIndexRecordError::RecordTimestampError(parsing_error))
+                }
+            }
         } else {
-            Err(RecordTimestampError)
+            Err(CDXJIndexRecordError::ValueNotFound(format!(
+                "Record {} does not have a date in the WARC header",
+                record.warc_id()
+            )))
         }
     }
 }
@@ -77,14 +81,11 @@ impl fmt::Display for RecordTimestamp {
 #[derive(Debug)]
 pub struct WarcFilename(String);
 
-#[derive(Debug)]
-pub struct WarcFilenameError;
-
 impl WarcFilename {
     pub fn new(
         record: &Record<BufferedBody>,
         warc_file_path: &Path,
-    ) -> Result<Self, WarcFilenameError> {
+    ) -> Result<Self, CDXJIndexRecordError> {
         if let Some(record_filename) = record.header(WarcHeader::Filename) {
             println!("record filename is {record_filename} from file");
             Ok(Self(record_filename.into_owned()))
@@ -96,7 +97,10 @@ impl WarcFilename {
             } else {
                 // Hit this error case if the filename
                 // cannot be inferred from the Path
-                Err(WarcFilenameError)
+                Err(CDXJIndexRecordError::WarcFilenameError(format!(
+                    "Cannot infer filename from {}",
+                    warc_file_path.to_string_lossy()
+                )))
             }
         }
     }
@@ -110,15 +114,15 @@ impl fmt::Display for WarcFilename {
 #[derive(Debug)]
 pub struct RecordDigest(String);
 
-#[derive(Debug)]
-pub struct RecordDigestError;
-
 impl RecordDigest {
-    pub fn new(record: &Record<BufferedBody>) -> Result<Self, RecordDigestError> {
+    pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
         if let Some(record_digest) = record.header(WarcHeader::PayloadDigest) {
             Ok(Self(record_digest.to_string()))
         } else {
-            Err(RecordDigestError)
+            Err(CDXJIndexRecordError::ValueNotFound(format!(
+                "Record {} does not have a payload digest in the WARC header",
+                record.warc_id()
+            )))
         }
     }
 }
@@ -181,7 +185,8 @@ impl RecordContentType {
             let header_byte_slice = cut_http_headers_from_record(record);
             // parse the raw byte array with httparse, this adds
             // data to the empty header list created above
-            httparse::parse_headers(header_byte_slice, &mut headers).unwrap();
+            httparse::parse_headers(header_byte_slice, &mut headers)?;
+
             // loop through the list of headers looking for the content-type
             let mut content_type: Option<Result<&str, std::str::Utf8Error>> = None;
             for header in &headers {
@@ -199,7 +204,7 @@ impl RecordContentType {
                 }
             } else {
                 Err(CDXJIndexRecordError::ValueNotFound(
-                    "could not find content type in headers".to_owned(),
+                    "could not find content type in HTTP headers".to_owned(),
                 ))
             }
         }
@@ -244,7 +249,7 @@ impl RecordUrl {
             // print the full url here
             let url = self.0.as_str();
             Err(CDXJIndexRecordError::ValueNotFound(format!(
-                "Unable to construct a searchable string from {url}"
+                "Url {url} does not have a host, unable to construct a searchable string"
             )))
         }
     }
@@ -284,39 +289,51 @@ impl fmt::Display for RecordStatus {
 
 #[derive(Debug)]
 pub enum CDXJIndexRecordError {
+    RecordTimestampError(chrono::ParseError),
+    WarcFilenameError(String),
+    RecordContentTypeError(String),
     RecordUrlError(url::ParseError),
     RecordStatusError(std::num::ParseIntError),
-    RecordContentTypeError(String),
     ValueNotFound(String),
 }
 impl std::fmt::Display for CDXJIndexRecordError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CDXJIndexRecordError::RecordUrlError(e) => {
-                write!(f, "Could not parse url {}", e)
+            CDXJIndexRecordError::RecordTimestampError(parse_error_message) => {
+                write!(f, "Could not get record timestamp: {parse_error_message}")
             }
-            CDXJIndexRecordError::RecordStatusError(parse_int_error) => {
-                write!(f, "Could not parse HTTP status from {}", parse_int_error)
+            CDXJIndexRecordError::WarcFilenameError(error_message) => {
+                write!(f, "Could not get WARC filename: {error_message}")
             }
-            CDXJIndexRecordError::RecordContentTypeError(s) => {
-                write!(f, "Could not parse record content type {}", s)
+            CDXJIndexRecordError::RecordContentTypeError(error_message) => {
+                write!(f, "Could not parse record content type: {error_message}")
             }
-            CDXJIndexRecordError::ValueNotFound(s) => write!(f, "General error: {}", s),
+            CDXJIndexRecordError::RecordUrlError(parse_error_message) => {
+                write!(f, "Could not parse url: {parse_error_message}")
+            }
+            CDXJIndexRecordError::RecordStatusError(parse_int_error_message) => {
+                write!(f, "Could not parse HTTP status: {parse_int_error_message}")
+            }
+            CDXJIndexRecordError::ValueNotFound(error_message) => {
+                write!(f, "Value not found: {error_message}")
+            }
         }
     }
 }
-// impl From<std::num::ParseIntError> for CDXJIndexRecordError {
-//     fn from(e: std::num::ParseIntError) -> Self {
-//         Self::RecordStatusError(e)
-//     }
-// }
+impl From<httparse::Error> for CDXJIndexRecordError {
+    fn from(http_parse_error: httparse::Error) -> Self {
+        Self::RecordContentTypeError(http_parse_error.to_string())
+    }
+}
 impl Error for CDXJIndexRecordError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            CDXJIndexRecordError::RecordTimestampError(parse_error) => Some(parse_error),
             CDXJIndexRecordError::RecordUrlError(parse_error) => Some(parse_error),
             CDXJIndexRecordError::RecordStatusError(parse_int_error) => Some(parse_int_error),
-            CDXJIndexRecordError::RecordContentTypeError(_) => None,
-            CDXJIndexRecordError::ValueNotFound(_) => None,
+            CDXJIndexRecordError::ValueNotFound(_)
+            | CDXJIndexRecordError::RecordContentTypeError(_)
+            | CDXJIndexRecordError::WarcFilenameError(_) => None,
         }
     }
 }
