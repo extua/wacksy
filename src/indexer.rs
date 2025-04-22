@@ -33,14 +33,16 @@ pub fn compose_index(
             };
             // Need to be able to skip the record here
             // add this to a bufwriter
-            if let Ok(processed_record) =
-                process_record(&unwrapped_record, byte_counter, warc_file_path)
-            {
-                let record_some = processed_record;
-                let record_bytes = record_some.as_bytes();
-                index.extend_from_slice(record_bytes);
-            } else {
-                eprintln!("unable to process record, skipping");
+            match process_record(&unwrapped_record, byte_counter, warc_file_path) {
+                Ok(processed_record) => {
+                    let record_some = processed_record;
+                    let record_bytes = record_some.as_bytes();
+                    index.extend_from_slice(record_bytes);
+                }
+                Err(err) => eprintln!(
+                    "Skipping record {} because {err}",
+                    unwrapped_record.warc_id()
+                ),
             }
 
             // here we are getting the length of the unwrapped record header
@@ -136,7 +138,12 @@ pub fn compose_index(
             };
             Ok(parsed_record.to_string())
         } else {
-            Err("Record with ID HERE is not of an indexable type, skipping".into())
+            Err(format!(
+                "Record {} of type {} is not an indexable type, skipping",
+                record.warc_id(),
+                record.warc_type().to_string()
+            )
+            .into())
         }
     }
 
