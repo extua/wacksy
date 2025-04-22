@@ -8,6 +8,7 @@ use libflate::gzip::MultiDecoder;
 use warc::{BufferedBody, Record, RecordIter, RecordType, WarcReader};
 
 mod cdxj_index;
+mod cdxj_index_errors;
 use cdxj_index::*;
 
 pub fn compose_index(

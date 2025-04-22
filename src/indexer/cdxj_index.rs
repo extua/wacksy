@@ -1,12 +1,13 @@
 use core::fmt;
 use core::str;
-use std::error::Error;
 use std::path::Path;
 
 use chrono::DateTime;
 use url::Position;
 use url::Url;
 use warc::{BufferedBody, Record, RecordType, WarcHeader};
+
+use super::cdxj_index_errors::CDXJIndexRecordError;
 
 // At some point in future I want to
 // return a CDXJIndex struct from compose_index
@@ -292,51 +293,5 @@ impl RecordStatus {
 impl fmt::Display for RecordStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
-    }
-}
-
-#[derive(Debug)]
-pub enum CDXJIndexRecordError {
-    RecordTimestampError(chrono::ParseError),
-    WarcFilenameError(String),
-    RecordContentTypeError(String),
-    RecordUrlError(url::ParseError),
-    RecordStatusError(std::num::ParseIntError),
-    ValueNotFound(String),
-}
-impl std::fmt::Display for CDXJIndexRecordError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CDXJIndexRecordError::RecordTimestampError(parse_error_message) => {
-                write!(f, "Could not get record timestamp: {parse_error_message}")
-            }
-            CDXJIndexRecordError::WarcFilenameError(error_message) => {
-                write!(f, "Could not get WARC filename: {error_message}")
-            }
-            CDXJIndexRecordError::RecordContentTypeError(error_message) => {
-                write!(f, "Could not parse record content type: {error_message}")
-            }
-            CDXJIndexRecordError::RecordUrlError(parse_error_message) => {
-                write!(f, "Could not parse url: {parse_error_message}")
-            }
-            CDXJIndexRecordError::RecordStatusError(parse_int_error_message) => {
-                write!(f, "Could not parse HTTP status: {parse_int_error_message}")
-            }
-            CDXJIndexRecordError::ValueNotFound(error_message) => {
-                write!(f, "Value not found: {error_message}")
-            }
-        }
-    }
-}
-impl Error for CDXJIndexRecordError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            CDXJIndexRecordError::RecordTimestampError(parse_error) => Some(parse_error),
-            CDXJIndexRecordError::RecordUrlError(parse_error) => Some(parse_error),
-            CDXJIndexRecordError::RecordStatusError(parse_int_error) => Some(parse_int_error),
-            CDXJIndexRecordError::ValueNotFound(_)
-            | CDXJIndexRecordError::RecordContentTypeError(_)
-            | CDXJIndexRecordError::WarcFilenameError(_) => None,
-        }
     }
 }
