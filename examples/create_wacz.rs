@@ -3,9 +3,7 @@ use wacksy::{DataPackage, Wacz, compose_datapackage, compose_index, zip_dir};
 
 fn main() {
     let warc_file_path: &Path = Path::new(
-        // "../warc_examples/ARCHIVEIT-2502-MONTHLY-JOB2533941-SEED1071647-20250401082651721-00001-h3.warc.gz",
-        // "../warc_examples/rec-20220831121514100172-203de340fdad.warc.gz",
-        "examples/warc_example.warc",
+        "examples/rec-e7e68da067d0-20250423121042981-0.warc.gz",
     );
 
     let warc_file = fs::read(warc_file_path).unwrap();
