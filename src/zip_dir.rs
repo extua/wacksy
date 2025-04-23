@@ -62,7 +62,7 @@ pub fn zip_dir(wacz_object: &Wacz) -> Result<Vec<u8>, Error> {
         &mut archive,
         options,
         &wacz_object.index_bytes,
-        "indexes/index.cdx",
+        "indexes/index.cdxj",
     );
 
     // Finish the archive, which will write the central directory.
