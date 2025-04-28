@@ -25,10 +25,11 @@ pub fn compose_index(
             record_count = record_count.wrapping_add(1);
             let unwrapped_record: Record<BufferedBody> = match record {
                 Err(err) => {
-                    // Any error with the record here
-                    // affects the offset counter, so
-                    // can't index the file!
-                    panic!("Unable to index file. Record error: {err}\r\n");
+                    // Any error with the record at this
+                    // point affects the offset counter,
+                    // so can't index the rest of the file.
+                    eprintln!("Unable to index the remainder of the file. Record error: {err}\r\n");
+                    break;
                 }
                 Ok(record) => record,
             };
@@ -68,10 +69,11 @@ pub fn compose_index(
             record_count = record_count.wrapping_add(1);
             let unwrapped_record: Record<BufferedBody> = match record {
                 Err(err) => {
-                    // Any error with the record here
-                    // affects the offset counter, so
-                    // can't index the file!
-                    panic!("Unable to index file. Record error: {err}\r\n");
+                    // Any error with the record at this
+                    // point affects the offset counter,
+                    // so can't index the rest of the file.
+                    eprintln!("Unable to index file. Record error: {err}\r\n");
+                    break;
                 }
                 Ok(record) => record,
             };
