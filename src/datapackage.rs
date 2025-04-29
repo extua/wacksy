@@ -54,14 +54,14 @@ impl DataPackage {
     pub fn add_resource(data_package: &mut DataPackage, resource: DataPackageResource) {
         data_package.resources.push(resource);
     }
-    pub fn digest(data_package: &Self) -> DataPackageDigest {
-        let data_package_file = serde_json::to_vec(&data_package).unwrap();
+    pub fn digest(data_package: &Self) -> Result<DataPackageDigest, serde_json::Error> {
+        let data_package_file = serde_json::to_vec(&data_package)?;
         let file_hash = Sha256::digest(data_package_file);
         let file_hash_formatted = format!("sha256:{file_hash:x}");
-        DataPackageDigest {
+        Ok(DataPackageDigest {
             path: "datapackage.json".to_owned(),
             hash: file_hash_formatted,
-        }
+        })
     }
 }
 
