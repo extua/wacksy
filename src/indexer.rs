@@ -18,12 +18,12 @@ pub fn compose_index(
         file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>>,
         warc_file_path: &Path,
     ) -> Result<Vec<u8>, Box<dyn Error + Send + Sync + 'static>> {
-        let mut record_count: u16 = 0u16;
+        let mut record_count: usize = 0usize;
         let mut byte_counter: u64 = 0u64;
         let mut index: Vec<u8> = Vec::with_capacity(128);
-        for record in file_records {
-            record_count = record_count.wrapping_add(1);
-            let unwrapped_record: Record<BufferedBody> = match record {
+        for record in file_records.enumerate() {
+            record_count = record.0;
+            let unwrapped_record: Record<BufferedBody> = match record.1 {
                 Err(err) => {
                     // Any error with the record at this
                     // point affects the offset counter,
@@ -42,7 +42,8 @@ pub fn compose_index(
                     index.extend_from_slice(record_bytes);
                 }
                 Err(err) => eprintln!(
-                    "Skipping record {} because {err}",
+                    "Skipping record number {} with id {} because {err}",
+                    record_count,
                     unwrapped_record.warc_id()
                 ),
             }
@@ -62,12 +63,12 @@ pub fn compose_index(
         file_records: RecordIter<BufReader<File>>,
         warc_file_path: &Path,
     ) -> Result<Vec<u8>, Box<dyn Error + Send + Sync + 'static>> {
-        let mut record_count: u16 = 0u16;
+        let mut record_count: usize = 0usize;
         let mut byte_counter: u64 = 0u64;
         let mut index: Vec<u8> = Vec::with_capacity(128);
-        for record in file_records {
-            record_count = record_count.wrapping_add(1);
-            let unwrapped_record: Record<BufferedBody> = match record {
+        for record in file_records.enumerate() {
+            record_count = record.0;
+            let unwrapped_record: Record<BufferedBody> = match record.1 {
                 Err(err) => {
                     // Any error with the record at this
                     // point affects the offset counter,
@@ -86,11 +87,11 @@ pub fn compose_index(
                     index.extend_from_slice(record_bytes);
                 }
                 Err(err) => eprintln!(
-                    "Skipping record {} because {err}",
+                    "Skipping record number {} with id {} because {err}",
+                    record_count,
                     unwrapped_record.warc_id()
                 ),
             }
-
             // here we are getting the length of the unwrapped record header
             // plus the record body
             let record_length: u64 = unwrapped_record.content_length()
