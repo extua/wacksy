@@ -35,7 +35,7 @@ pub struct DataPackageDigest {
 // Higher level data package
 impl Default for DataPackage {
     fn default() -> Self {
-        DataPackage {
+        Self {
             profile: "data-package".to_owned(),
             wacz_version: WACZ_VERSION.to_owned(),
             created: Local::now().to_rfc3339(),
@@ -49,9 +49,9 @@ impl Default for DataPackage {
 }
 impl DataPackage {
     fn new() -> Self {
-        DataPackage::default()
+        Self::default()
     }
-    pub fn add_resource(data_package: &mut DataPackage, resource: DataPackageResource) {
+    pub fn add_resource(data_package: &mut Self, resource: DataPackageResource) {
         data_package.resources.push(resource);
     }
     pub fn digest(data_package: &Self) -> Result<DataPackageDigest, serde_json::Error> {
@@ -79,7 +79,7 @@ impl DataPackageResource {
         let file_hash = Sha256::digest(file_bytes);
         let file_hash_formatted = format!("sha256:{file_hash:x}");
 
-        DataPackageResource {
+        Self {
             name: file_name,
             path,
             hash: file_hash_formatted,
