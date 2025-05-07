@@ -23,7 +23,30 @@ pub fn compose_index(
         let mut index: Vec<u8> = Vec::with_capacity(128);
         for record in file_records.enumerate() {
             record_count = record.0;
-            let unwrapped_record: Record<BufferedBody> = match record.1 {
+            match record.1 {
+                // Need to be able to skip the record here
+                // add this to a bufwriter
+                Ok(record) => {
+                    match process_record(&record, byte_counter, warc_file_path) {
+                        Ok(processed_record) => {
+                            let record_some = processed_record;
+                            let record_bytes = record_some.as_bytes();
+                            index.extend_from_slice(record_bytes);
+                        }
+                        Err(err) => eprintln!(
+                            "Skipping record number {} with id {} because {err}",
+                            record_count,
+                            record.warc_id()
+                        ),
+                    }
+                    // here we are getting the length of the record body
+                    // in content_length, added to the length of the
+                    // unwrapped record header
+                    let record_length: u64 = record.content_length()
+                        + record.into_raw_parts().0.to_string().len() as u64;
+                    // increment the byte counter after processing the record
+                    byte_counter = byte_counter.wrapping_add(record_length);
+                }
                 Err(err) => {
                     // Any error with the record at this
                     // point affects the offset counter,
@@ -31,29 +54,7 @@ pub fn compose_index(
                     eprintln!("Unable to index the remainder of the file. Record error: {err}\r\n");
                     break;
                 }
-                Ok(record) => record,
-            };
-            // Need to be able to skip the record here
-            // add this to a bufwriter
-            match process_record(&unwrapped_record, byte_counter, warc_file_path) {
-                Ok(processed_record) => {
-                    let record_some = processed_record;
-                    let record_bytes = record_some.as_bytes();
-                    index.extend_from_slice(record_bytes);
-                }
-                Err(err) => eprintln!(
-                    "Skipping record number {} with id {} because {err}",
-                    record_count,
-                    unwrapped_record.warc_id()
-                ),
             }
-
-            // here we are getting the length of the unwrapped record header
-            // plus the record body
-            let record_length: u64 = unwrapped_record.content_length()
-                + unwrapped_record.into_raw_parts().0.to_string().len() as u64;
-            // increment the byte counter after processing the record
-            byte_counter = byte_counter.wrapping_add(record_length);
         }
         println!("Total records: {record_count}");
         Ok(index)
@@ -68,36 +69,38 @@ pub fn compose_index(
         let mut index: Vec<u8> = Vec::with_capacity(128);
         for record in file_records.enumerate() {
             record_count = record.0;
-            let unwrapped_record: Record<BufferedBody> = match record.1 {
+            match record.1 {
+                // Need to be able to skip the record here
+                // add this to a bufwriter
+                Ok(record) => {
+                    match process_record(&record, byte_counter, warc_file_path) {
+                        Ok(processed_record) => {
+                            let record_some = processed_record;
+                            let record_bytes = record_some.as_bytes();
+                            index.extend_from_slice(record_bytes);
+                        }
+                        Err(err) => eprintln!(
+                            "Skipping record number {} with id {} because {err}",
+                            record_count,
+                            record.warc_id()
+                        ),
+                    }
+                    // here we are getting the length of the record body
+                    // in content_length, added to the length of the
+                    // unwrapped record header
+                    let record_length: u64 = record.content_length()
+                        + record.into_raw_parts().0.to_string().len() as u64;
+                    // increment the byte counter after processing the record
+                    byte_counter = byte_counter.wrapping_add(record_length);
+                }
                 Err(err) => {
                     // Any error with the record at this
                     // point affects the offset counter,
                     // so can't index the rest of the file.
-                    eprintln!("Unable to index file. Record error: {err}\r\n");
+                    eprintln!("Unable to index the remainder of the file. Record error: {err}\r\n");
                     break;
                 }
-                Ok(record) => record,
-            };
-            // Need to be able to skip the record here
-            // add this to a bufwriter
-            match process_record(&unwrapped_record, byte_counter, warc_file_path) {
-                Ok(processed_record) => {
-                    let record_some = processed_record;
-                    let record_bytes = record_some.as_bytes();
-                    index.extend_from_slice(record_bytes);
-                }
-                Err(err) => eprintln!(
-                    "Skipping record number {} with id {} because {err}",
-                    record_count,
-                    unwrapped_record.warc_id()
-                ),
             }
-            // here we are getting the length of the unwrapped record header
-            // plus the record body
-            let record_length: u64 = unwrapped_record.content_length()
-                + unwrapped_record.into_raw_parts().0.to_string().len() as u64;
-            // increment the byte counter after processing the record
-            byte_counter = byte_counter.wrapping_add(record_length);
         }
         println!("Total records: {record_count}");
         Ok(index)
