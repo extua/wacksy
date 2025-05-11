@@ -15,7 +15,7 @@ fn process_record(
     record: &Record<BufferedBody>,
     byte_counter: u64,
     warc_file_path: &Path,
-) -> Result<String, Box<dyn Error + Send + Sync + 'static>> {
+) -> Result<CDXJIndexRecord, Box<dyn Error + Send + Sync + 'static>> {
     // use something like a control flow enum to
     // organise this
     // https://doc.rust-lang.org/stable/std/ops/enum.ControlFlow.html
@@ -48,7 +48,7 @@ fn process_record(
             length: record.content_length(),
             status,
         };
-        Ok(parsed_record.to_string())
+        Ok(parsed_record)
     } else {
         Err(format!(
             "Record {} of type {} is not an indexable type, skipping",
@@ -64,7 +64,7 @@ pub fn compose_index(
 ) -> Result<Vec<u8>, Box<dyn Error + Send + Sync + 'static>> {
     let mut record_count: usize = 0usize;
     let mut byte_counter: u64 = 0u64;
-    let mut index: Vec<u8> = Vec::with_capacity(128);
+    let mut index: Vec<CDXJIndexRecord> = Vec::with_capacity(1024);
 
     if warc_file_path.extension() == Some(OsStr::new("gz")) {
         let file_gzip: WarcReader<BufReader<MultiDecoder<BufReader<File>>>> =
@@ -79,9 +79,7 @@ pub fn compose_index(
                 Ok(record) => {
                     match process_record(&record, byte_counter, warc_file_path) {
                         Ok(processed_record) => {
-                            let record_some = processed_record;
-                            let record_bytes = record_some.as_bytes();
-                            index.extend_from_slice(record_bytes);
+                            index.push(processed_record);
                         }
                         Err(err) => eprintln!(
                             "Skipping record number {} with id {} because {err}",
@@ -117,9 +115,7 @@ pub fn compose_index(
                 Ok(record) => {
                     match process_record(&record, byte_counter, warc_file_path) {
                         Ok(processed_record) => {
-                            let record_some = processed_record;
-                            let record_bytes = record_some.as_bytes();
-                            index.extend_from_slice(record_bytes);
+                            index.push(processed_record);
                         }
                         Err(err) => eprintln!(
                             "Skipping record number {} with id {} because {err}",
@@ -148,5 +144,7 @@ pub fn compose_index(
 
     println!("Total records: {record_count}");
 
+    let index = index.iter().map(|x| x.to_string());
+    println!("\n\n\n index iterator is {}", index.to_string());
     Ok(index)
 }

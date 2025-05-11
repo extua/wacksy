@@ -9,15 +9,6 @@ use warc::{BufferedBody, Record, RecordType, WarcHeader};
 
 use super::cdxj_index_errors::CDXJIndexRecordError;
 
-// At some point in future I want to
-// return a CDXJIndex struct from compose_index
-// pub struct CDXJIndex(Vec<CDXJIndexRecord>);
-// impl CDXJIndex {
-//     pub fn new() -> Self {
-//         Self(Vec::with_capacity(8))
-//     }
-// }
-
 #[derive(Debug)]
 pub struct CDXJIndexRecord {
     pub timestamp: RecordTimestamp,
