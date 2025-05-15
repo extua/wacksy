@@ -16,7 +16,7 @@ env:
 jobs:
 
   check_rust:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout directory
         uses: actions/checkout@v4
@@ -28,13 +28,21 @@ jobs:
         run: cargo check --locked
 
   test_valid_zip:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout directory
         uses: actions/checkout@v4
         
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Generate WACZ from example
         run: cargo run --locked --example create_wacz
