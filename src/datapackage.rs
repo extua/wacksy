@@ -35,7 +35,7 @@ pub struct DataPackageDigest {
 // Higher level data package
 impl Default for DataPackage {
     fn default() -> Self {
-        Self {
+        return Self {
             profile: "data-package".to_owned(),
             wacz_version: WACZ_VERSION.to_owned(),
             created: Local::now().to_rfc3339(),
@@ -49,7 +49,7 @@ impl Default for DataPackage {
 }
 impl DataPackage {
     fn new() -> Self {
-        Self::default()
+        return Self::default()
     }
     pub fn add_resource(data_package: &mut Self, resource: DataPackageResource) {
         data_package.resources.push(resource);
@@ -58,7 +58,7 @@ impl DataPackage {
         let data_package_file = serde_json::to_vec(&data_package)?;
         let file_hash = Sha256::digest(data_package_file);
         let file_hash_formatted = format!("sha256:{file_hash:x}");
-        Ok(DataPackageDigest {
+        return Ok(DataPackageDigest {
             path: "datapackage.json".to_owned(),
             hash: file_hash_formatted,
         })
@@ -67,6 +67,7 @@ impl DataPackage {
 
 // A singular resource
 impl DataPackageResource {
+    #[must_use]
     pub fn new(path: &Path, file_bytes: &[u8]) -> Self {
         // handle the option-result, but there's not
         // much to be done about this unfortunately
@@ -79,7 +80,7 @@ impl DataPackageResource {
         let file_hash = Sha256::digest(file_bytes);
         let file_hash_formatted = format!("sha256:{file_hash:x}");
 
-        Self {
+        return Self {
             name: file_name,
             path,
             hash: file_hash_formatted,
@@ -103,5 +104,5 @@ pub fn compose_datapackage(warc_file: &[u8], index_file: &[u8]) -> DataPackage {
     let resource = DataPackageResource::new(path, index_file);
     DataPackage::add_resource(&mut data_package, resource);
 
-    data_package
+    return data_package
 }

@@ -27,6 +27,8 @@ unsafe_code = "forbid"
 cargo = { level = "warn", priority = 0 }
 pedantic = { level = "warn", priority = 0 }
 nursery = { level = "warn", priority = 0 }
+implicit_return = { level = "warn", priority = 1 }
 needless_return = { level = "allow", priority = 1 }
-# implicit_return = "warn"
+redundant_else = { level = "allow", priority = 1 }
 question_mark_used = { level = "allow", priority = 1 }
+option_if_let_else = { level = "allow", priority = 1 }
