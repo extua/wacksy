@@ -88,6 +88,7 @@ impl DataPackageResource {
     }
 }
 
+#[must_use]
 pub fn compose_datapackage(warc_file: &[u8], index_file: &[u8]) -> DataPackage {
     let mut data_package = DataPackage::new();
 

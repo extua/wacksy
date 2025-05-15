@@ -101,7 +101,7 @@ impl CDXJIndex {
                     }
                 }
             }
-        };
+        }
         println!("Total records: {record_count}");
 
         Ok(Self(index))
@@ -110,7 +110,7 @@ impl CDXJIndex {
 
 impl Display for CDXJIndex {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        let index_string: String = self.0.iter().map(|s| s.to_string()).collect();
+        let index_string: String = self.0.iter().map(ToString::to_string).collect();
         write!(f, "{index_string}")
     }
 }
@@ -120,10 +120,7 @@ impl CDXJIndexRecord {
         record: &Record<BufferedBody>,
         byte_counter: u64,
         warc_file_path: &Path,
-    ) -> Result<CDXJIndexRecord, Box<dyn Error + Send + Sync + 'static>> {
-        // use something like a control flow enum to
-        // organise this
-        // https://doc.rust-lang.org/stable/std/ops/enum.ControlFlow.html
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'static>> {
         let timestamp = RecordTimestamp::new(record)?;
         let url = RecordUrl::new(record)?;
         let digest = RecordDigest::new(record)?;
@@ -142,7 +139,7 @@ impl CDXJIndexRecord {
         ]
         .contains(record.warc_type())
         {
-            let parsed_record = CDXJIndexRecord {
+            let parsed_record = Self {
                 timestamp,
                 url,
                 searchable_url,
@@ -379,15 +376,14 @@ impl RecordUrl {
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
         if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
             match Url::parse(&warc_header_url) {
-                Ok(record_url) => Ok(Self(record_url)),
-                Err(parse_error) => Err(CDXJIndexRecordError::RecordUrlError(parse_error)),
+                Ok(record_url) => return Ok(Self(record_url)),
+                Err(parse_error) => return Err(CDXJIndexRecordError::RecordUrlError(parse_error)),
             }
-        } else {
-            Err(CDXJIndexRecordError::ValueNotFound(format!(
-                "Record {} does not have a url in the WARC header",
-                record.warc_id()
-            )))
         }
+        Err(CDXJIndexRecordError::ValueNotFound(format!(
+            "Record {} does not have a url in the WARC header",
+            record.warc_id()
+        )))
     }
     pub fn as_searchable_string(&self) -> Result<String, CDXJIndexRecordError> {
         if let Some(host) = self.0.host_str() {
@@ -400,14 +396,13 @@ impl RecordUrl {
             // capture everything else on the end of the url
             let url_path = &self.0[Position::BeforePath..];
             // put it all together
-            Ok(format!("{host_reversed}){url_path}"))
-        } else {
-            // print the full url here
-            let url = self.0.as_str();
-            Err(CDXJIndexRecordError::ValueNotFound(format!(
-                "Url {url} does not have a host, unable to construct a searchable string"
-            )))
+            return Ok(format!("{host_reversed}){url_path}"));
         }
+        // print the full url here
+        let url = self.0.as_str();
+        return Err(CDXJIndexRecordError::ValueNotFound(format!(
+            "Url {url} does not have a host, unable to construct a searchable string"
+        )));
     }
 }
 impl fmt::Display for RecordUrl {

@@ -1,4 +1,3 @@
-#[forbid(unsafe_code)]
 pub mod zip_dir;
 pub use zip_dir::*;
 pub mod datapackage;
