@@ -153,7 +153,7 @@ impl CDXJIndexRecord {
             return Ok(parsed_record)
         } else {
             return Err(format!(
-                "Record {} of type {} is not an indexable type, skipping",
+                "Record {} of type {} is not an indexable type",
                 record.warc_id(),
                 record.warc_type().to_string()
             )

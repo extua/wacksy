@@ -1,8 +1,15 @@
 use crate::Wacz;
 use rawzip::{CompressionMethod, Error, ZipArchiveWriter, ZipDataWriter, ZipEntryOptions};
 
-// this function should accept a... struct, with a warc file,
-// which is a stream of bytes, and some other things, also streams of bytes
+/// # Zipper
+/// 
+/// this function should accept a... struct, with a warc file,
+/// which is a stream of bytes, and some other things, also streams of bytes
+/// 
+/// # Errors
+///
+/// Will return a rawzip error if anything goes wrong with adding files
+/// files to the archive.
 pub fn zip_dir(wacz_object: &Wacz) -> Result<Vec<u8>, Error> {
     fn add_file_to_archive(
         archive: &mut ZipArchiveWriter<&mut Vec<u8>>,
@@ -44,6 +51,7 @@ pub fn zip_dir(wacz_object: &Wacz) -> Result<Vec<u8>, Error> {
         &mut archive,
         options,
         &wacz_object.warc_file,
+        // at this point if the file is gzipped, the file should be 'data.gz'
         "archive/data.warc",
     );
     add_file_to_archive(
@@ -68,5 +76,5 @@ pub fn zip_dir(wacz_object: &Wacz) -> Result<Vec<u8>, Error> {
     // Finish the archive, which will write the central directory.
     archive.finish()?;
 
-    Ok(output)
+    return Ok(output)
 }
