@@ -29,6 +29,6 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     // This needs to be parsed into a file!
     let wacz_data: Vec<u8> = zip_dir(&wacz_object).unwrap();
     let path: &Path = Path::new("wacz_example.wacz");
-    // fs::write(path, wacz_data)?;
+    fs::write(path, wacz_data)?;
     Ok(())
 }
