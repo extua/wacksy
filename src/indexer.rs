@@ -293,8 +293,7 @@ impl RecordContentType {
             // enough then you'll get a TooManyHeaders error
             let mut headers = [httparse::EMPTY_HEADER; 64];
             let mut response = httparse::Response::new(&mut headers);
-
-            match response.parse(&record.body()) {
+            match response.parse(record.body()) {
                 Ok(headers) => headers,
                 Err(http_parsing_error) => {
                     return Err(CDXJIndexRecordError::RecordContentTypeError(
@@ -381,20 +380,27 @@ impl fmt::Display for RecordUrl {
 pub struct RecordStatus(u16);
 
 impl RecordStatus {
+    /// Parse the record body with httparse and get
+    /// the status code from the response
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
-        // Cut a slice out from the record body from
-        // byte 9 to byte 12, this should be the
-        // status code
-        let header_byte_slice: &[u8] = &record.body()[9..12];
-        // Convert it to a string, if this doesn't work
-        // it'll produce unknown characters, this could
-        // be a properly-handled error?
-        let header_status = String::from_utf8_lossy(header_byte_slice);
-        // Parse it to a number, if there's an error it appears here!
-        match header_status.parse::<u16>() {
-            Ok(header_status_int) => return Ok(Self(header_status_int)),
-            Err(int_error) => return Err(CDXJIndexRecordError::RecordStatusError(int_error)),
-        }
+        let mut headers = [httparse::EMPTY_HEADER; 64];
+        let mut response = httparse::Response::new(&mut headers);
+
+        match response.parse(record.body()) {
+            Ok(_) => match response.code {
+                Some(response_code) => return Ok(Self(response_code)),
+                None => {
+                    return Err(CDXJIndexRecordError::RecordStatusError(
+                        "response code is empty".to_owned(),
+                    ));
+                }
+            },
+            Err(http_parsing_error) => {
+                return Err(CDXJIndexRecordError::RecordStatusError(
+                    http_parsing_error.to_string(),
+                ));
+            }
+        };
     }
 }
 impl fmt::Display for RecordStatus {

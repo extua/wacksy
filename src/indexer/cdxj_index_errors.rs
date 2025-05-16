@@ -6,7 +6,7 @@ pub enum CDXJIndexRecordError {
     WarcFilenameError(String),
     RecordContentTypeError(String),
     RecordUrlError(url::ParseError),
-    RecordStatusError(std::num::ParseIntError),
+    RecordStatusError(String),
     ValueNotFound(String),
 }
 impl std::fmt::Display for CDXJIndexRecordError {
@@ -38,8 +38,8 @@ impl Error for CDXJIndexRecordError {
         match self {
             Self::RecordTimestampError(parse_error) => return Some(parse_error),
             Self::RecordUrlError(parse_error) => return Some(parse_error),
-            Self::RecordStatusError(parse_int_error) => return Some(parse_int_error),
             Self::ValueNotFound(_)
+            | Self::RecordStatusError(_)
             | Self::RecordContentTypeError(_)
             | Self::WarcFilenameError(_) => return None,
         }
