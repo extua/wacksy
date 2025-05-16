@@ -44,12 +44,12 @@ impl Default for DataPackage {
             // any WACZ file, the jsonl file and
             // the WARC file
             resources: Vec::with_capacity(2),
-        }
+        };
     }
 }
 impl DataPackage {
     fn new() -> Self {
-        return Self::default()
+        return Self::default();
     }
     pub fn add_resource(data_package: &mut Self, resource: DataPackageResource) {
         data_package.resources.push(resource);
@@ -61,7 +61,7 @@ impl DataPackage {
         return Ok(DataPackageDigest {
             path: "datapackage.json".to_owned(),
             hash: file_hash_formatted,
-        })
+        });
     }
 }
 
@@ -85,7 +85,7 @@ impl DataPackageResource {
             path,
             hash: file_hash_formatted,
             bytes: file_bytes.len(),
-        }
+        };
     }
 }
 
@@ -104,5 +104,5 @@ pub fn compose_datapackage(warc_file: &[u8], index_file: &[u8]) -> DataPackage {
     let resource = DataPackageResource::new(path, index_file);
     DataPackage::add_resource(&mut data_package, resource);
 
-    return data_package
+    return data_package;
 }

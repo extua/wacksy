@@ -104,14 +104,14 @@ impl CDXJIndex {
         }
         println!("Total records: {record_count}");
 
-        return Ok(Self(index))
+        return Ok(Self(index));
     }
 }
 
 impl Display for CDXJIndex {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let index_string: String = self.0.iter().map(ToString::to_string).collect();
-        return write!(f, "{index_string}")
+        return write!(f, "{index_string}");
     }
 }
 
@@ -150,14 +150,14 @@ impl CDXJIndexRecord {
                 length: record.content_length(),
                 status,
             };
-            return Ok(parsed_record)
+            return Ok(parsed_record);
         } else {
             return Err(format!(
                 "Record {} of type {} is not an indexable type",
                 record.warc_id(),
                 record.warc_type().to_string()
             )
-            .into())
+            .into());
         }
     }
 }
@@ -191,7 +191,7 @@ impl fmt::Display for CDXJIndexRecord {
             self.length,
             self.status,
             self.filename
-        )
+        );
     }
 }
 
@@ -213,13 +213,13 @@ impl RecordTimestamp {
             return Err(CDXJIndexRecordError::ValueNotFound(format!(
                 "Record {} does not have a date in the WARC header",
                 record.warc_id()
-            )))
+            )));
         }
-            }
+    }
 }
 impl fmt::Display for RecordTimestamp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        return write!(f, "{}", self.0.format("%Y%m%d%H%M%S"))
+        return write!(f, "{}", self.0.format("%Y%m%d%H%M%S"));
     }
 }
 
@@ -233,26 +233,26 @@ impl WarcFilename {
     ) -> Result<Self, CDXJIndexRecordError> {
         if let Some(record_filename) = record.header(WarcHeader::Filename) {
             println!("record filename is {record_filename} from file");
-            return Ok(Self(record_filename.into_owned()))
+            return Ok(Self(record_filename.into_owned()));
         } else {
             // If no filename is found in the record
             // we get the filename from the file path
             if let Some(warc_file_path) = warc_file_path.file_name() {
-                return Ok(Self(warc_file_path.to_string_lossy().to_string()))
+                return Ok(Self(warc_file_path.to_string_lossy().to_string()));
             } else {
                 // Hit this error case if the filename
                 // cannot be inferred from the Path
                 return Err(CDXJIndexRecordError::WarcFilenameError(format!(
                     "Cannot infer filename from {}",
                     warc_file_path.to_string_lossy()
-                )))
+                )));
             }
         }
     }
 }
 impl fmt::Display for WarcFilename {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        return write!(f, "{}", self.0)
+        return write!(f, "{}", self.0);
     }
 }
 
@@ -262,18 +262,18 @@ pub struct RecordDigest(String);
 impl RecordDigest {
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
         if let Some(record_digest) = record.header(WarcHeader::PayloadDigest) {
-            return Ok(Self(record_digest.to_string()))
+            return Ok(Self(record_digest.to_string()));
         } else {
             return Err(CDXJIndexRecordError::ValueNotFound(format!(
                 "Record {} does not have a payload digest in the WARC header",
                 record.warc_id()
-            )))
+            )));
         }
     }
 }
 impl fmt::Display for RecordDigest {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        return write!(f, "{}", self.0)
+        return write!(f, "{}", self.0);
     }
 }
 
@@ -307,7 +307,7 @@ fn cut_http_headers_from_record(record: &Record<BufferedBody>) -> &[u8] {
     return record
         .body()
         .get(first_http_response_byte_counter..second_http_response_byte_counter)
-        .unwrap()
+        .unwrap();
 }
 
 #[derive(Debug)]
@@ -322,7 +322,7 @@ impl RecordContentType {
         if record.warc_type() == &RecordType::Revisit {
             // If the WARC record type is revisit,
             // that's the content type
-            return Ok(Self("revisit".to_owned()))
+            return Ok(Self("revisit".to_owned()));
         } else {
             // create a list of 64 empty headers, if this is not
             // enough then you'll get a TooManyHeaders error
@@ -351,21 +351,23 @@ impl RecordContentType {
             if let Some(content_type) = content_type {
                 match content_type {
                     Ok(content_type) => return Ok(Self(content_type.to_owned())),
-                    Err(parsing_error) => return Err(CDXJIndexRecordError::RecordContentTypeError(
-                        parsing_error.to_string(),
-                    )),
+                    Err(parsing_error) => {
+                        return Err(CDXJIndexRecordError::RecordContentTypeError(
+                            parsing_error.to_string(),
+                        ));
+                    }
                 }
             } else {
                 return Err(CDXJIndexRecordError::ValueNotFound(
                     "could not find content type in HTTP headers".to_owned(),
-                ))
+                ));
             }
         }
     }
 }
 impl fmt::Display for RecordContentType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        return write!(f, "{}", self.0)
+        return write!(f, "{}", self.0);
     }
 }
 
@@ -383,7 +385,7 @@ impl RecordUrl {
         return Err(CDXJIndexRecordError::ValueNotFound(format!(
             "Record {} does not have a url in the WARC header",
             record.warc_id()
-        )))
+        )));
     }
     pub fn as_searchable_string(&self) -> Result<String, CDXJIndexRecordError> {
         if let Some(host) = self.0.host_str() {
@@ -408,7 +410,7 @@ impl RecordUrl {
 impl fmt::Display for RecordUrl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let url_string: String = self.0.clone().into();
-        return write!(f, "{}", url_string.to_lowercase())
+        return write!(f, "{}", url_string.to_lowercase());
     }
 }
 
@@ -434,6 +436,6 @@ impl RecordStatus {
 }
 impl fmt::Display for RecordStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        return write!(f, "{}", self.0)
+        return write!(f, "{}", self.0);
     }
 }
