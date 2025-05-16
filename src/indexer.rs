@@ -2,8 +2,7 @@ use core::fmt;
 use core::str;
 use std::error::Error;
 use std::ffi::OsStr;
-use std::fmt::Display;
-use std::fmt::Formatter;
+use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
@@ -11,8 +10,7 @@ use std::path::Path;
 mod cdxj_index_errors;
 use cdxj_index_errors::CDXJIndexRecordError;
 use chrono::DateTime;
-use url::Position;
-use url::Url;
+use url::{Position, Url};
 
 use libflate::gzip::MultiDecoder;
 use warc::WarcHeader;
@@ -67,7 +65,7 @@ impl CDXJIndex {
             }
         } else {
             let file_not_gzip: WarcReader<BufReader<File>> = WarcReader::from_path(warc_file_path)?;
-            let file_records: RecordIter<_> = file_not_gzip.iter_records();
+            let file_records: RecordIter<BufReader<File>> = file_not_gzip.iter_records();
             for record in file_records.enumerate() {
                 record_count = record.0;
                 match record.1 {
@@ -277,39 +275,6 @@ impl fmt::Display for RecordDigest {
     }
 }
 
-fn cut_http_headers_from_record(record: &Record<BufferedBody>) -> &[u8] {
-    // Find the position of the first newline, this will
-    // get just the headers, not the full request, see
-    // https://stackoverflow.com/questions/69610022/how-can-i-get-httparse-to-parse-my-request-correctly
-    let mut first_http_response_byte_counter: usize = 0;
-    for byte in record.body() {
-        first_http_response_byte_counter += 1;
-        if byte == &0xA {
-            first_http_response_byte_counter += 1;
-            break;
-        }
-    }
-
-    // Find the position of the first sequence of
-    // two newlines, this ends the HTTP 1.1 header block
-    // according to section 3 of RFC7230
-    let mut second_http_response_byte_counter: usize = 0;
-    for byte in record.body() {
-        let next_byte: &u8 = record.body().iter().next().unwrap();
-        second_http_response_byte_counter += 1;
-        if byte == &0xA && next_byte == &0xA {
-            break;
-        }
-    }
-
-    // cut the HTTP header out of the WARC body
-    // and, there is an error here to handle
-    return record
-        .body()
-        .get(first_http_response_byte_counter..second_http_response_byte_counter)
-        .unwrap();
-}
-
 #[derive(Debug)]
 pub struct RecordContentType(String);
 
@@ -327,11 +292,9 @@ impl RecordContentType {
             // create a list of 64 empty headers, if this is not
             // enough then you'll get a TooManyHeaders error
             let mut headers = [httparse::EMPTY_HEADER; 64];
-            let header_byte_slice = cut_http_headers_from_record(record);
-            // parse the raw byte array with httparse, this adds
-            // data to the empty header list created above
+            let mut response = httparse::Response::new(&mut headers);
 
-            match httparse::parse_headers(header_byte_slice, &mut headers) {
+            match response.parse(&record.body()) {
                 Ok(headers) => headers,
                 Err(http_parsing_error) => {
                     return Err(CDXJIndexRecordError::RecordContentTypeError(

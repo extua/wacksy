@@ -97,7 +97,7 @@ impl DataPackageResource {
 }
 
 /// The datapackage should look something like this when written out to file:
-/// 
+///
 /// ```json
 /// {
 ///   "profile": "data-package",
@@ -120,7 +120,7 @@ impl DataPackageResource {
 ///   ]
 /// }
 /// ```
-/// 
+///
 /// [Link to spec](https://specs.webrecorder.net/wacz/1.1.1/#datapackage-json)
 #[must_use]
 pub fn compose_datapackage(warc_file: &[u8], index_file: &[u8]) -> DataPackage {
