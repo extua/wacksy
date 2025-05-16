@@ -7,49 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.0.1-alpha.1](https://github.com/extua/wacksy/compare/v0.0.1-alpha...v0.0.1-alpha.1) - 2025-05-16
+## [0.0.1-beta](https://github.com/extua/wacksy/compare/v0.0.1-alpha...v0.0.1-beta) - 2025-05-16
+
+Work on this version was mostly refactoring, adding structured types and error handling, and some documentation (only just started).
+
+Still on my todo list is to use the indexer to also create pages.jsonl files.
 
 ### Fixed
 
 - replace wrapping_add in loop counter with enumerate, closes #29
-- *(indexer)* return the same error message for gzipped and non-gzipped files
+- *(indexer)* return the same error message for gzipped and non-gzipped files. I have tried to simplify the code for processing both gzipped and non-gzipped files. There's still unnecessary duplication but it's the best I can do for the moment.
 
 ### Other
 
-- bump citation version ready for release
-- remove operations chart in readme
-- document some DataPackage structs
-- add semicolons to explicit return statements
-- add documentation to zipper
-- make everything return explicitly
-- fix various lints
-- add lints to cargofile
-- downgrade rust version to use arm runner
-- use arm runners, cache pip
-- bump deps
-- *(indexer)* move compose_index into CDXJIndex type
-- *(indexer)* return a list of records rather than some bytes
-- *(indexer)* move gzip and non-gzip loops back into compose_index
-- match indexer record loop to  clear happy and unhappy paths
-- remove unnecessary structure name repetition for DataPackage
-- replace CDXJIndexRecordError with Self
-- *(deps)* bump the minor-bumps group across 1 directory with 2 updates ([#28](https://github.com/extua/wacksy/pull/28))
-- *(datapackage)* propogate errors upwards
-- *(indexer)* println and break on error rather than panic if a record is bad
-- update README with link to a funny meme
-- change example used for creating files
-- *(zipper)* we are creating cdxj indexes, not cdx
-- *(indexer)* move indexing errors into their own module
-- *(indexer)* return httparse parsing error to string in RecordContentType::new()
-- *(indexer)* bubble up errors from compose_index
-- *(indexer)* finish implementing most of the indexer error types
-- *(indexer)* continue to specify source when implementing Error
-- bump MSRV to 1.85.1
-- *(indexer)* add more error types for the indexer
-- *(indexer)* remove type definitions from indexer.rs
-- *(indexer)* move WARC record types into their own module
-- *(lib)* pro-actively forbid unsafe code
-- *(indexer)* use writeln instead of adding a newline to the string
+- document some DataPackage structs, better documentation coming once this is properly finished!
+- as a style change, this now uses explicit returns everywhere, and I have set lints in cargo.toml to enforce this
+- *(indexer)* many of the index functons are now implemented on types. The completed index is returned *as a struct*, which has a display implementation to write it out to json(l).
+- *(datapackage)* propogate errors upwards, there are still some panics, but structured error handling is a lot more comprehensive now. Happy and unhappy paths are a little clearer to identify.
+- update README with link to a funny meme :)
 
 ## [0.0.1-alpha](https://github.com/extua/wacksy/releases/tag/v0.0.1-alpha) - 2025-04-05
 
