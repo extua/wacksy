@@ -6,9 +6,8 @@ use std::path::Path;
 
 use crate::WACZ_VERSION;
 
-// Link to the spec
-// https://specs.webrecorder.net/wacz/1.1.1/#datapackage-json
-
+/// This struct defines a [frictionless
+/// datapackage](https://specs.frictionlessdata.io/data-package/).
 #[derive(Serialize, Deserialize)]
 pub struct DataPackage {
     pub profile: String,
@@ -18,6 +17,8 @@ pub struct DataPackage {
     pub resources: Vec<DataPackageResource>,
 }
 
+/// A datapackage resource is anything which needs
+/// to be defined in the datapackage
 #[derive(Serialize, Deserialize)]
 pub struct DataPackageResource {
     pub name: String,
@@ -32,7 +33,6 @@ pub struct DataPackageDigest {
     pub hash: String,
 }
 
-// Higher level data package
 impl Default for DataPackage {
     fn default() -> Self {
         return Self {
@@ -40,10 +40,7 @@ impl Default for DataPackage {
             wacz_version: WACZ_VERSION.to_owned(),
             created: Local::now().to_rfc3339(),
             software: format!("wacksy {}", env!("CARGO_PKG_VERSION")),
-            // There will be at least two resources in
-            // any WACZ file, the jsonl file and
-            // the WARC file
-            resources: Vec::with_capacity(2),
+            resources: Vec::with_capacity(512),
         };
     }
 }
@@ -54,6 +51,16 @@ impl DataPackage {
     pub fn add_resource(data_package: &mut Self, resource: DataPackageResource) {
         data_package.resources.push(resource);
     }
+
+    /// # Digest datapackage
+    ///
+    /// Takes a `DataPackage` struct and returns a `DataPackageDigest`
+    /// containing an sha256 hash of the datapackage.
+    ///
+    /// # Errors
+    ///
+    /// Will return a `serde_json` error if there's any problem
+    /// deserialising the data package to a vector.
     pub fn digest(data_package: &Self) -> Result<DataPackageDigest, serde_json::Error> {
         let data_package_file = serde_json::to_vec(&data_package)?;
         let file_hash = Sha256::digest(data_package_file);
@@ -89,6 +96,32 @@ impl DataPackageResource {
     }
 }
 
+/// The datapackage should look something like this when written out to file:
+/// 
+/// ```json
+/// {
+///   "profile": "data-package",
+///   "wacz_version": "1.1.1",
+///   "created": "2025-05-16T11:03:03.499792020+01:00",
+///   "software": "wacksy 0.0.1-alpha",
+///   "resources": [
+///     {
+///       "name": "data.warc",
+///       "path": "archive/data.warc",
+///       "hash": "sha256:210d0810aaf4a4aba556f97bc7fc497d176a8c171d8edab3390e213a41bed145",
+///       "bytes": 4599
+///     },
+///     {
+///       "name": "index.cdxj",
+///       "path": "indexes/index.cdxj",
+///       "hash": "sha256:0494f16f39fbb3744556e1d64be1088109ac35c730f4a30ac3a3b10942340ca3",
+///       "bytes": 543
+///     }
+///   ]
+/// }
+/// ```
+/// 
+/// [Link to spec](https://specs.webrecorder.net/wacz/1.1.1/#datapackage-json)
 #[must_use]
 pub fn compose_datapackage(warc_file: &[u8], index_file: &[u8]) -> DataPackage {
     let mut data_package = DataPackage::new();

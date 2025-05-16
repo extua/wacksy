@@ -67,7 +67,7 @@ impl CDXJIndex {
             }
         } else {
             let file_not_gzip: WarcReader<BufReader<File>> = WarcReader::from_path(warc_file_path)?;
-            let file_records: RecordIter<BufReader<File>> = file_not_gzip.iter_records();
+            let file_records: RecordIter<_> = file_not_gzip.iter_records();
             for record in file_records.enumerate() {
                 record_count = record.0;
                 match record.1 {
