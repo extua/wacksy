@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.1-beta.1](https://github.com/extua/wacksy/compare/v0.0.1-beta...v0.0.1-beta.1) - 2025-05-16
+
+### Other
+
+- *(indexer)* use httparse to parse http status code from response
+- *(indexer)* remove the happily redundant cut_http_headers_from_record function
+- add info and badges to readme
+
 ## [0.0.1-beta](https://github.com/extua/wacksy/compare/v0.0.1-alpha...v0.0.1-beta) - 2025-05-16
 
 Work on this version was mostly refactoring, adding structured types and error handling, and some documentation (only just started).
