@@ -103,7 +103,7 @@ impl DataPackageResource {
 ///   "profile": "data-package",
 ///   "wacz_version": "1.1.1",
 ///   "created": "2025-05-16T11:03:03.499792020+01:00",
-///   "software": "wacksy 0.0.1-alpha",
+///   "software": "wacksy 0.0.1-beta",
 ///   "resources": [
 ///     {
 ///       "name": "data.warc",

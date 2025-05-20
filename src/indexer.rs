@@ -1,5 +1,6 @@
-use core::fmt;
-use core::str;
+//! Reads the WARC file and composes a CDX(J) Index.
+
+use core::{fmt, str};
 use std::error::Error;
 use std::ffi::OsStr;
 use std::fmt::{Display, Formatter};
@@ -18,6 +19,8 @@ use warc::{BufferedBody, Record, RecordIter, RecordType, WarcReader};
 
 pub struct CDXJIndex(Vec<CDXJIndexRecord>);
 impl CDXJIndex {
+    /// This is the main function which sets off
+    /// building the index.
     pub fn new(warc_file_path: &Path) -> Result<Self, Box<dyn Error + Send + Sync + 'static>> {
         fn loop_over_records<T: Iterator<Item = Result<Record<BufferedBody>, warc::Error>>>(
             file_records: T,
@@ -139,14 +142,22 @@ impl CDXJIndexRecord {
 pub struct CDXJIndexRecord {
     pub timestamp: RecordTimestamp,
     pub searchable_url: String,
-    pub url: RecordUrl,          // The URL that was archived
-    pub digest: RecordDigest,    // A cryptographic hash for the HTTP response payload
-    pub mime: RecordContentType, // The media type for the response payload
-    pub filename: WarcFilename,  // The WARC file where the WARC record is located
-    pub offset: u64,             // The byte offset for the WARC record
-    pub length: u64,             // The length in bytes of the WARC record
-    pub status: RecordStatus,    // The HTTP status code for the HTTP response
+    /// The URL that was archived
+    pub url: RecordUrl,
+    /// A cryptographic hash for the HTTP response payload       
+    pub digest: RecordDigest,
+    /// The media type for the response payload
+    pub mime: RecordContentType,
+    /// The WARC file where the WARC record is located
+    pub filename: WarcFilename,
+    /// The byte offset for the WARC record
+    pub offset: u64,
+    /// The length in bytes of the WARC record
+    pub length: u64,
+    // The HTTP status code for the HTTP response
+    pub status: RecordStatus,
 }
+
 // Display the record as shown in the example in the
 // spec https://specs.webrecorder.net/cdxj/0.1.0/#example
 // Could there be a better way to serialize this?
@@ -355,6 +366,16 @@ impl fmt::Display for RecordUrl {
 pub struct RecordStatus(u16);
 
 impl RecordStatus {
+    /// # Record status
+    ///
+    /// Parse the record body with httparse and get
+    /// the status code from the response.
+    ///
+    /// # Errors
+    ///
+    /// Will return a `RecordStatusError`,
+    /// which can contain either a _parsing_ error from httparse,
+    /// or an error arising from an empty response code.
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
         let mut headers = [httparse::EMPTY_HEADER; 64];
         let mut response = httparse::Response::new(&mut headers);
