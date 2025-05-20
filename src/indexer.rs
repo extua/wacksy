@@ -19,15 +19,14 @@ use warc::{BufferedBody, Record, RecordIter, RecordType, WarcReader};
 pub struct CDXJIndex(Vec<CDXJIndexRecord>);
 impl CDXJIndex {
     pub fn new(warc_file_path: &Path) -> Result<Self, Box<dyn Error + Send + Sync + 'static>> {
-        let mut record_count: usize = 0usize;
-        let mut byte_counter: u64 = 0u64;
-        let mut index = Vec::with_capacity(1024);
+        fn loop_over_records<T: Iterator<Item = Result<Record<BufferedBody>, warc::Error>>>(
+            file_records: T,
+            warc_file_path: &Path,
+        ) -> CDXJIndex {
+            let mut record_count: usize = 0;
+            let mut byte_counter: u64 = 0;
+            let mut index = Vec::with_capacity(1024);
 
-        if warc_file_path.extension() == Some(OsStr::new("gz")) {
-            let file_gzip: WarcReader<BufReader<MultiDecoder<BufReader<File>>>> =
-                WarcReader::from_path_gzip(warc_file_path)?;
-            let file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>> =
-                file_gzip.iter_records();
             for record in file_records.enumerate() {
                 record_count = record.0;
                 match record.1 {
@@ -63,46 +62,22 @@ impl CDXJIndex {
                     }
                 }
             }
+            println!("Total records: {record_count}");
+
+            return CDXJIndex(index);
+        }
+
+        if warc_file_path.extension() == Some(OsStr::new("gz")) {
+            let file_gzip: WarcReader<BufReader<MultiDecoder<BufReader<File>>>> =
+                WarcReader::from_path_gzip(warc_file_path)?;
+            let file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>> =
+                file_gzip.iter_records();
+            return Ok(loop_over_records(file_records, warc_file_path));
         } else {
             let file_not_gzip: WarcReader<BufReader<File>> = WarcReader::from_path(warc_file_path)?;
             let file_records: RecordIter<BufReader<File>> = file_not_gzip.iter_records();
-            for record in file_records.enumerate() {
-                record_count = record.0;
-                match record.1 {
-                    // Need to be able to skip the record here
-                    // add this to a bufwriter
-                    Ok(record) => {
-                        match CDXJIndexRecord::new(&record, byte_counter, warc_file_path) {
-                            Ok(processed_record) => {
-                                index.push(processed_record);
-                            }
-                            Err(err) => eprintln!(
-                                "Skipping record number {} with id {} because {err}",
-                                record_count,
-                                record.warc_id()
-                            ),
-                        }
-                        // here we are getting the length of the record body
-                        // in content_length, added to the length of the
-                        // unwrapped record header
-                        let record_length: u64 = record.content_length()
-                            + record.into_raw_parts().0.to_string().len() as u64;
-                        // increment the byte counter after processing the record
-                        byte_counter = byte_counter.wrapping_add(record_length);
-                    }
-                    Err(err) => {
-                        // Any error with the record at this
-                        // point affects the offset counter,
-                        // so can't index the rest of the file.
-                        eprintln!("Unable to index the remainder of the file. Record error: {err}");
-                        break;
-                    }
-                }
-            }
-        }
-        println!("Total records: {record_count}");
-
-        return Ok(Self(index));
+            return Ok(loop_over_records(file_records, warc_file_path));
+        };
     }
 }
 
@@ -380,8 +355,6 @@ impl fmt::Display for RecordUrl {
 pub struct RecordStatus(u16);
 
 impl RecordStatus {
-    /// Parse the record body with httparse and get
-    /// the status code from the response
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
         let mut headers = [httparse::EMPTY_HEADER; 64];
         let mut response = httparse::Response::new(&mut headers);
