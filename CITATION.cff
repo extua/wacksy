@@ -5,8 +5,8 @@ message: >-
   metadata from this file.
 type: software
 authors:
-  - given-names: Marshall
-    family-names: Pierre
+  - given-names: Pierre
+    family-names: Marshall
     email: pierre.marshall@bodleian.ox.ac.uk
     affiliation: Oxford University
     orcid: 'https://orcid.org/0000-0001-9245-7670'
