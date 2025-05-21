@@ -1,8 +1,37 @@
+//! Types for defining a datapackage.json file.
+//!
+//! The file should look something like this when complete:
+//!
+//! ```json
+//! {
+//!   "profile": "data-package",
+//!   "wacz_version": "1.1.1",
+//!   "created": "2025-05-16T11:03:03.499792020+01:00",
+//!   "software": "wacksy 0.0.1-beta",
+//!   "resources": [
+//!     {
+//!       "name": "data.warc",
+//!       "path": "archive/data.warc",
+//!       "hash": "sha256:210d0810aaf4a4aba556f97bc7fc497d176a8c171d8edab3390e213a41bed145",
+//!       "bytes": 4599
+//!     },
+//!     {
+//!       "name": "index.cdxj",
+//!       "path": "indexes/index.cdxj",
+//!       "hash": "sha256:0494f16f39fbb3744556e1d64be1088109ac35c730f4a30ac3a3b10942340ca3",
+//!       "bytes": 543
+//!     }
+//!   ]
+//! }
+//! ```
+//!
+//! [Link to spec](https://specs.webrecorder.net/wacz/1.1.1/#datapackage-json)
+
 use chrono::Local;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use sha2::{Digest, Sha256};
-use std::path::Path;
+use std::{error::Error, path::Path};
 
 use crate::WACZ_VERSION;
 
@@ -18,7 +47,7 @@ pub struct DataPackage {
 }
 
 /// A datapackage resource is anything which needs
-/// to be defined in the datapackage
+/// to be defined in the datapackage.
 #[derive(Serialize, Deserialize)]
 pub struct DataPackageResource {
     pub name: String,
@@ -48,6 +77,9 @@ impl DataPackage {
     fn new() -> Self {
         return Self::default();
     }
+
+    /// Takes a `DataPackage` struct and pushes a resource to the
+    /// 'resources' field.
     pub fn add_resource(data_package: &mut Self, resource: DataPackageResource) {
         data_package.resources.push(resource);
     }
@@ -72,13 +104,26 @@ impl DataPackage {
     }
 }
 
-// A singular resource
 impl DataPackageResource {
     #[must_use]
-    pub fn new(path: &Path, file_bytes: &[u8]) -> Self {
-        // handle the option-result, but there's not
-        // much to be done about this unfortunately
-        let file_name = path.file_name().unwrap().to_str().unwrap().to_owned();
+    /// This is for serialising a single resource to
+    /// a struct to pass through to the `DataPackage`.
+    pub fn new(path: &Path, file_bytes: &[u8]) -> Result<Self, DataPackageError> {
+        let file_name = match path.file_name() {
+            Some(file_name) => match file_name.to_str() {
+                Some(file_name) => file_name.to_owned(),
+                None => {
+                    return Err(DataPackageError::FilenameError(format!(
+                        "unable to convert {file_name:?} to string"
+                    )));
+                }
+            },
+            None => {
+                return Err(DataPackageError::FilenameError(
+                    "file name is empty".to_owned(),
+                ));
+            }
+        };
         let path = path.to_str().unwrap().to_owned();
 
         // create a sha256 hash, from documentation
@@ -87,55 +132,53 @@ impl DataPackageResource {
         let file_hash = Sha256::digest(file_bytes);
         let file_hash_formatted = format!("sha256:{file_hash:x}");
 
-        return Self {
+        return Ok(Self {
             name: file_name,
             path,
             hash: file_hash_formatted,
             bytes: file_bytes.len(),
-        };
+        });
     }
 }
 
-/// The datapackage should look something like this when written out to file:
-///
-/// ```json
-/// {
-///   "profile": "data-package",
-///   "wacz_version": "1.1.1",
-///   "created": "2025-05-16T11:03:03.499792020+01:00",
-///   "software": "wacksy 0.0.1-beta",
-///   "resources": [
-///     {
-///       "name": "data.warc",
-///       "path": "archive/data.warc",
-///       "hash": "sha256:210d0810aaf4a4aba556f97bc7fc497d176a8c171d8edab3390e213a41bed145",
-///       "bytes": 4599
-///     },
-///     {
-///       "name": "index.cdxj",
-///       "path": "indexes/index.cdxj",
-///       "hash": "sha256:0494f16f39fbb3744556e1d64be1088109ac35c730f4a30ac3a3b10942340ca3",
-///       "bytes": 543
-///     }
-///   ]
-/// }
-/// ```
-///
-/// [Link to spec](https://specs.webrecorder.net/wacz/1.1.1/#datapackage-json)
+#[derive(Debug)]
+pub enum DataPackageError {
+    FilenameError(String),
+}
+impl std::fmt::Display for DataPackageError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::FilenameError(error_message) => {
+                return write!(f, "Filename error: {error_message}");
+            }
+        }
+    }
+}
+impl Error for DataPackageError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::FilenameError(_) => return None,
+        }
+    }
+}
+
 #[must_use]
-pub fn compose_datapackage(warc_file: &[u8], index_file: &[u8]) -> DataPackage {
+pub fn compose_datapackage(
+    warc_file: &[u8],
+    index_file: &[u8],
+) -> Result<DataPackage, Box<dyn Error + Send + Sync + 'static>> {
     let mut data_package = DataPackage::new();
 
     // this _could_ be a loop, with more things
     // add warc file to datapackage
     let path: &Path = Path::new("archive/data.warc");
-    let resource = DataPackageResource::new(path, warc_file);
+    let resource = DataPackageResource::new(path, warc_file)?;
     DataPackage::add_resource(&mut data_package, resource);
 
     // add index file to datapackage
     let path: &Path = Path::new("indexes/index.cdxj");
-    let resource = DataPackageResource::new(path, index_file);
+    let resource = DataPackageResource::new(path, index_file)?;
     DataPackage::add_resource(&mut data_package, resource);
 
-    return data_package;
+    return Ok(data_package);
 }

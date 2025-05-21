@@ -11,7 +11,7 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
 
     let index_bytes = index.to_string().into_bytes();
 
-    let data_package = compose_datapackage(&warc_file, &index_bytes);
+    let data_package = compose_datapackage(&warc_file, &index_bytes)?;
     let data_package_digest = DataPackage::digest(&data_package)?;
 
     let data_package_digest_bytes = serde_json::to_vec(&data_package_digest)?;
