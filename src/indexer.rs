@@ -3,7 +3,6 @@
 use core::{fmt, str};
 use std::error::Error;
 use std::ffi::OsStr;
-use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
@@ -84,8 +83,8 @@ impl CDXJIndex {
     }
 }
 
-impl Display for CDXJIndex {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+impl fmt::Display for CDXJIndex {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let index_string: String = self.0.iter().map(ToString::to_string).collect();
         return write!(f, "{index_string}");
     }
@@ -279,7 +278,7 @@ impl RecordContentType {
             let mut headers = [httparse::EMPTY_HEADER; 64];
             let mut response = httparse::Response::new(&mut headers);
             match response.parse(record.body()) {
-                Ok(headers) => headers,
+                Ok(status) => status,
                 Err(http_parsing_error) => {
                     return Err(CDXJIndexRecordError::RecordContentTypeError(
                         http_parsing_error.to_string(),
@@ -288,7 +287,7 @@ impl RecordContentType {
             };
 
             // loop through the list of headers looking for the content-type
-            let mut content_type: Option<Result<&str, std::str::Utf8Error>> = None;
+            let mut content_type: Option<Result<&str, str::Utf8Error>> = None;
             for header in &headers {
                 if header.name == "content-type" {
                     content_type = Some(str::from_utf8(header.value));
@@ -296,8 +295,8 @@ impl RecordContentType {
                 }
             }
             match content_type {
-                Some(content_type) => match content_type {
-                    Ok(content_type) => return Ok(Self(content_type.to_owned())),
+                Some(some_content_type) => match some_content_type {
+                    Ok(parsed_content_type) => return Ok(Self(parsed_content_type.to_owned())),
                     Err(parsing_error) => {
                         return Err(CDXJIndexRecordError::RecordContentTypeError(
                             parsing_error.to_string(),
