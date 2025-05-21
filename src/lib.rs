@@ -4,7 +4,7 @@
 pub mod zip_dir;
 pub use zip_dir::zip_dir;
 pub mod datapackage;
-pub use datapackage::{DataPackage, DataPackageDigest, DataPackageResource, compose_datapackage};
+pub use datapackage::{DataPackage, DataPackageDigest, DataPackageResource};
 pub mod indexer;
 
 const WACZ_VERSION: &str = "1.1.1"; // deprecated in WACZ 1.2.0

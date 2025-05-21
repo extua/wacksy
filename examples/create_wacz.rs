@@ -1,6 +1,6 @@
 use core::error::Error;
 use std::{fs, path::Path};
-use wacksy::{DataPackage, Wacz, compose_datapackage, indexer::CDXJIndex, zip_dir};
+use wacksy::{DataPackage, Wacz, indexer::CDXJIndex, zip_dir};
 
 fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let warc_file_path: &Path = Path::new("examples/rec-e7e68da067d0-20250423121042981-0.warc.gz");
@@ -11,7 +11,7 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
 
     let index_bytes = index.to_string().into_bytes();
 
-    let data_package = compose_datapackage(&warc_file, &index_bytes)?;
+    let data_package = DataPackage::new(&warc_file, &index_bytes)?;
     let data_package_digest = DataPackage::digest(&data_package)?;
 
     let data_package_digest_bytes = serde_json::to_vec(&data_package_digest)?;

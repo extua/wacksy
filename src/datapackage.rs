@@ -74,13 +74,38 @@ impl Default for DataPackage {
     }
 }
 impl DataPackage {
-    fn new() -> Self {
-        return Self::default();
+    /// # Create datapackage
+    ///
+    /// Composes the data package and adds resources to it.
+    ///
+    /// # Errors
+    ///
+    /// Will return a `DataPackageError` relating to any 
+    /// resource if there is anything wrong with the filename
+    /// or path of a resource.
+    pub fn new(
+        warc_file: &[u8],
+        index_file: &[u8],
+    ) -> Result<DataPackage, Box<dyn Error + Send + Sync + 'static>> {
+        let mut data_package = DataPackage::default();
+
+        // this _could_ be a loop, with more things
+        // add warc file to datapackage
+        let path: &Path = Path::new("archive/data.warc");
+        let resource = DataPackageResource::new(path, warc_file)?;
+        DataPackage::add_resource(&mut data_package, resource);
+
+        // add index file to datapackage
+        let path: &Path = Path::new("indexes/index.cdxj");
+        let resource = DataPackageResource::new(path, index_file)?;
+        DataPackage::add_resource(&mut data_package, resource);
+
+        return Ok(data_package);
     }
 
     /// Takes a `DataPackage` struct and pushes a resource to the
     /// 'resources' field.
-    pub fn add_resource(data_package: &mut Self, resource: DataPackageResource) {
+    fn add_resource(data_package: &mut Self, resource: DataPackageResource) {
         data_package.resources.push(resource);
     }
 
@@ -113,18 +138,25 @@ impl DataPackageResource {
             Some(file_name) => match file_name.to_str() {
                 Some(file_name) => file_name.to_owned(),
                 None => {
-                    return Err(DataPackageError::FilenameError(format!(
+                    return Err(DataPackageError::FileNameError(format!(
                         "unable to convert {file_name:?} to string"
                     )));
                 }
             },
             None => {
-                return Err(DataPackageError::FilenameError(
+                return Err(DataPackageError::FileNameError(
                     "file name is empty".to_owned(),
                 ));
             }
         };
-        let path = path.to_str().unwrap().to_owned();
+        let path = match path.to_str() {
+            Some(path) => path.to_owned(),
+            None => {
+                return Err(DataPackageError::FilePathError(format!(
+                    "unable to convert {file_name:?} to string"
+                )));
+            }
+        };
 
         // create a sha256 hash, from documentation
         // here https://docs.rs/sha2/latest/sha2/
@@ -143,13 +175,17 @@ impl DataPackageResource {
 
 #[derive(Debug)]
 pub enum DataPackageError {
-    FilenameError(String),
+    FileNameError(String),
+    FilePathError(String),
 }
 impl std::fmt::Display for DataPackageError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::FilenameError(error_message) => {
+            Self::FileNameError(error_message) => {
                 return write!(f, "Filename error: {error_message}");
+            }
+            Self::FilePathError(error_message) => {
+                return write!(f, "File path error: {error_message}");
             }
         }
     }
@@ -157,28 +193,7 @@ impl std::fmt::Display for DataPackageError {
 impl Error for DataPackageError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::FilenameError(_) => return None,
+            Self::FilePathError(_) | Self::FileNameError(_) => return None,
         }
     }
-}
-
-#[must_use]
-pub fn compose_datapackage(
-    warc_file: &[u8],
-    index_file: &[u8],
-) -> Result<DataPackage, Box<dyn Error + Send + Sync + 'static>> {
-    let mut data_package = DataPackage::new();
-
-    // this _could_ be a loop, with more things
-    // add warc file to datapackage
-    let path: &Path = Path::new("archive/data.warc");
-    let resource = DataPackageResource::new(path, warc_file)?;
-    DataPackage::add_resource(&mut data_package, resource);
-
-    // add index file to datapackage
-    let path: &Path = Path::new("indexes/index.cdxj");
-    let resource = DataPackageResource::new(path, index_file)?;
-    DataPackage::add_resource(&mut data_package, resource);
-
-    return Ok(data_package);
 }
