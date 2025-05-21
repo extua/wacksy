@@ -184,20 +184,19 @@ pub struct RecordTimestamp(DateTime<chrono::FixedOffset>);
 
 impl RecordTimestamp {
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
-        if let Some(warc_header_date) = record.header(WarcHeader::Date) {
-            let parsed_datetime: Result<DateTime<chrono::FixedOffset>, chrono::ParseError> =
-                DateTime::parse_from_rfc3339(&warc_header_date);
-            match parsed_datetime {
+        match record.header(WarcHeader::Date) {
+            Some(warc_header_date) => match DateTime::parse_from_rfc3339(&warc_header_date) {
                 Ok(parsed_datetime) => return Ok(Self(parsed_datetime)),
                 Err(parsing_error) => {
                     return Err(CDXJIndexRecordError::RecordTimestampError(parsing_error));
                 }
+            },
+            None => {
+                return Err(CDXJIndexRecordError::ValueNotFound(format!(
+                    "Record {} does not have a date in the WARC header",
+                    record.warc_id()
+                )));
             }
-        } else {
-            return Err(CDXJIndexRecordError::ValueNotFound(format!(
-                "Record {} does not have a date in the WARC header",
-                record.warc_id()
-            )));
         }
     }
 }
@@ -296,20 +295,21 @@ impl RecordContentType {
                     break;
                 }
             }
-            if let Some(content_type) = content_type {
-                match content_type {
+            match content_type {
+                Some(content_type) => match content_type {
                     Ok(content_type) => return Ok(Self(content_type.to_owned())),
                     Err(parsing_error) => {
                         return Err(CDXJIndexRecordError::RecordContentTypeError(
                             parsing_error.to_string(),
                         ));
                     }
+                },
+                None => {
+                    return Err(CDXJIndexRecordError::ValueNotFound(
+                        "could not find content type in HTTP headers".to_owned(),
+                    ));
                 }
-            } else {
-                return Err(CDXJIndexRecordError::ValueNotFound(
-                    "could not find content type in HTTP headers".to_owned(),
-                ));
-            }
+            };
         }
     }
 }
@@ -329,12 +329,21 @@ impl RecordUrl {
                 Ok(record_url) => return Ok(Self(record_url)),
                 Err(parse_error) => return Err(CDXJIndexRecordError::RecordUrlError(parse_error)),
             }
+        } else {
+            return Err(CDXJIndexRecordError::ValueNotFound(format!(
+                "Record {} does not have a url in the WARC header",
+                record.warc_id()
+            )));
         }
-        return Err(CDXJIndexRecordError::ValueNotFound(format!(
-            "Record {} does not have a url in the WARC header",
-            record.warc_id()
-        )));
     }
+    /// Compose searchable string
+    ///
+    /// Take a url and return a Sort-friendly URI Reordering Transform (SURT)
+    /// formatted string. It is cast to lowercase when displayed.
+    ///
+    /// Errors
+    ///
+    /// Will return `ValueNotFound` if the url does not have a host.
     pub fn as_searchable_string(&self) -> Result<String, CDXJIndexRecordError> {
         if let Some(host) = self.0.host_str() {
             // split the host string into an array at each dot
@@ -347,12 +356,13 @@ impl RecordUrl {
             let url_path = &self.0[Position::BeforePath..];
             // put it all together
             return Ok(format!("{host_reversed}){url_path}"));
+        } else {
+            // print the full url here
+            let url = self.0.as_str();
+            return Err(CDXJIndexRecordError::ValueNotFound(format!(
+                "Url {url} does not have a host, unable to construct a searchable string"
+            )));
         }
-        // print the full url here
-        let url = self.0.as_str();
-        return Err(CDXJIndexRecordError::ValueNotFound(format!(
-            "Url {url} does not have a host, unable to construct a searchable string"
-        )));
     }
 }
 impl fmt::Display for RecordUrl {
