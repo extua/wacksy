@@ -80,25 +80,25 @@ impl DataPackage {
     ///
     /// # Errors
     ///
-    /// Will return a `DataPackageError` relating to any 
+    /// Will return a `DataPackageError` relating to any
     /// resource if there is anything wrong with the filename
     /// or path of a resource.
     pub fn new(
         warc_file: &[u8],
         index_file: &[u8],
-    ) -> Result<DataPackage, Box<dyn Error + Send + Sync + 'static>> {
-        let mut data_package = DataPackage::default();
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'static>> {
+        let mut data_package = Self::default();
 
         // this _could_ be a loop, with more things
         // add warc file to datapackage
         let path: &Path = Path::new("archive/data.warc");
         let resource = DataPackageResource::new(path, warc_file)?;
-        DataPackage::add_resource(&mut data_package, resource);
+        Self::add_resource(&mut data_package, resource);
 
         // add index file to datapackage
         let path: &Path = Path::new("indexes/index.cdxj");
         let resource = DataPackageResource::new(path, index_file)?;
-        DataPackage::add_resource(&mut data_package, resource);
+        Self::add_resource(&mut data_package, resource);
 
         return Ok(data_package);
     }
@@ -130,9 +130,16 @@ impl DataPackage {
 }
 
 impl DataPackageResource {
-    #[must_use]
+    /// # Instantiate datapackage resource
+    ///
     /// This is for serialising a single resource to
     /// a struct to pass through to the `DataPackage`.
+    ///
+    /// # Errors
+    ///
+    /// Will return a `DataPackageError` mainly in case the
+    /// resource file path or file name are missing or cannot
+    /// be converted to string.
     pub fn new(path: &Path, file_bytes: &[u8]) -> Result<Self, DataPackageError> {
         let file_name = match path.file_name() {
             Some(file_name) => match file_name.to_str() {
