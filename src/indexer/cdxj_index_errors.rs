@@ -8,6 +8,7 @@ pub enum CDXJIndexRecordError {
     RecordUrlError(url::ParseError),
     RecordStatusError(String),
     ValueNotFound(String),
+    UnindexableRecordType(warc::RecordType),
 }
 impl std::fmt::Display for CDXJIndexRecordError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -30,6 +31,13 @@ impl std::fmt::Display for CDXJIndexRecordError {
             Self::ValueNotFound(error_message) => {
                 return write!(f, "Value not found: {error_message}");
             }
+            Self::UnindexableRecordType(warc_type) => {
+                return write!(
+                    f,
+                    "Could not index this type of record: {}",
+                    warc_type.to_string()
+                );
+            }
         }
     }
 }
@@ -40,6 +48,7 @@ impl Error for CDXJIndexRecordError {
             Self::RecordUrlError(parse_error) => return Some(parse_error),
             Self::ValueNotFound(_)
             | Self::RecordStatusError(_)
+            | Self::UnindexableRecordType(_)
             | Self::RecordContentTypeError(_)
             | Self::WarcFilenameError(_) => return None,
         }

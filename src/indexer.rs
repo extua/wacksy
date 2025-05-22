@@ -1,6 +1,6 @@
-//! Reads the WARC file and composes a CDX(J) Index.
+//! Reads the WARC file and composes a CDX(J) index.
 
-use core::{fmt, str, error::Error};
+use core::{fmt, str};
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::BufReader;
@@ -17,9 +17,19 @@ use warc::{BufferedBody, Record, RecordIter, RecordType, WarcReader};
 
 pub struct CDXJIndex(Vec<CDXJIndexRecord>);
 impl CDXJIndex {
-    /// This is the main function which sets off
-    /// building the index.
-    pub fn new(warc_file_path: &Path) -> Result<Self, Box<dyn Error + Send + Sync + 'static>> {
+    /// # Create new index
+    ///
+    /// This is the main function which sets off looping
+    /// over the records and building the index.
+    ///
+    /// # Errors
+    ///
+    /// Will return a `std::io::Error` from
+    /// `WarcReader::from_path`/`from_path_gzip`
+    /// in case of any problem reading the Warc file.
+    pub fn new(warc_file_path: &Path) -> Result<Self, std::io::Error> {
+        // this looping function accepts a generic type which
+        // this allows us to pass in both gzipped and non-gzipped records
         fn loop_over_records<T: Iterator<Item = Result<Record<BufferedBody>, warc::Error>>>(
             file_records: T,
             warc_file_path: &Path,
@@ -31,7 +41,6 @@ impl CDXJIndex {
             for record in file_records.enumerate() {
                 record_count = record.0;
                 match record.1 {
-                    // Need to be able to skip the record here
                     // add this to a bufwriter
                     Ok(record) => {
                         match CDXJIndexRecord::new(&record, byte_counter, warc_file_path) {
@@ -39,25 +48,25 @@ impl CDXJIndex {
                                 index.push(processed_record);
                             }
                             Err(err) => eprintln!(
-                                "Skipping record number {} with id {} because {err}",
-                                record_count,
+                                // Any error with the record means we have to
+                                // skip over it and move on to the next one.
+                                "Skipping record number {record_count} with id {}: {err}",
                                 record.warc_id()
                             ),
                         }
-                        // here we are getting the length of the record body
-                        // in content_length, added to the length of the
-                        // unwrapped record header
+                        // Get the length of the record body in content_length,
+                        // added to the length of the unwrapped record header
                         let record_length: u64 = record.content_length()
                             + record.into_raw_parts().0.to_string().len() as u64;
+
                         // increment the byte counter after processing the record
                         byte_counter = byte_counter.wrapping_add(record_length);
                     }
                     Err(err) => {
-                        // Any error with the record at this
-                        // point affects the offset counter,
+                        // Any error with the record here affects the offset counter,
                         // so can't index the rest of the file.
                         eprintln!(
-                            "Unable to index the remainder of the file. Record error: {err}\r\n"
+                            "Unable to index the remainder of the file. WARC header parsing error: {err}"
                         );
                         break;
                     }
@@ -90,11 +99,21 @@ impl fmt::Display for CDXJIndex {
 }
 
 impl CDXJIndexRecord {
+    /// # Create index record
+    ///
+    /// Takes a `Record<BufferedBody>` and parses it to extract all
+    /// the fields which make up a CDX(J) record.
+    ///
+    /// # Errors
+    ///
+    /// If the record is not a Warc `response`, `revisit`, `resource`, or `metadata`,
+    /// an `UnindexableRecordType` error is returned. Otherwise, returns corresponding
+    /// errors for each of the CDX(J) fields.
     pub fn new(
         record: &Record<BufferedBody>,
         byte_counter: u64,
         warc_file_path: &Path,
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'static>> {
+    ) -> Result<Self, CDXJIndexRecordError> {
         let timestamp = RecordTimestamp::new(record)?;
         let url = RecordUrl::new(record)?;
         let digest = RecordDigest::new(record)?;
@@ -126,12 +145,10 @@ impl CDXJIndexRecord {
             };
             return Ok(parsed_record);
         } else {
-            return Err(format!(
-                "Record {} of type {} is not an indexable type",
-                record.warc_id(),
-                record.warc_type().to_string()
-            )
-            .into());
+            // if the record is not one of the types we want,
+            // return an error
+            let warc_type = record.warc_type().clone();
+            return Err(CDXJIndexRecordError::UnindexableRecordType(warc_type));
         }
     }
 }
@@ -328,10 +345,9 @@ impl RecordUrl {
                 Err(parse_error) => return Err(CDXJIndexRecordError::RecordUrlError(parse_error)),
             }
         } else {
-            return Err(CDXJIndexRecordError::ValueNotFound(format!(
-                "Record {} does not have a url in the WARC header",
-                record.warc_id()
-            )));
+            return Err(CDXJIndexRecordError::ValueNotFound(
+                "TargetURI not present in the WARC header".to_owned(),
+            ));
         }
     }
     /// Compose searchable string
@@ -358,7 +374,7 @@ impl RecordUrl {
             // print the full url here
             let url = self.0.as_str();
             return Err(CDXJIndexRecordError::ValueNotFound(format!(
-                "Url {url} does not have a host, unable to construct a searchable string"
+                "{url} does not have a host, unable to construct a searchable string"
             )));
         }
     }
