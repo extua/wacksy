@@ -1,7 +1,6 @@
 //! Reads the WARC file and composes a CDX(J) Index.
 
-use core::{fmt, str};
-use std::error::Error;
+use core::{fmt, str, error::Error};
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::BufReader;
