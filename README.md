@@ -31,4 +31,4 @@ pages
 
 ## License
 
-[MIT](https://github.com/extua/wacksy/blob/main/LICENSE) © Bodleian Libraries and contributors
+[MIT](https://github.com/extua/wacksy/blob/main/LICENSE) © [Bodleian Libraries](https://www.bodleian.ox.ac.uk/) and contributors
