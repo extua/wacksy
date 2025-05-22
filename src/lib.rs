@@ -2,12 +2,13 @@
 //! examples todo.
 
 pub mod datapackage;
-pub use datapackage::{DataPackage, DataPackageDigest, DataPackageResource};
 pub mod indexer;
 use rawzip::{CompressionMethod, Error, ZipArchiveWriter, ZipDataWriter, ZipEntryOptions};
 
 const WACZ_VERSION: &str = "1.1.1"; // deprecated in WACZ 1.2.0
 
+/// This struct contains various resources as
+/// byte arrays, ready to be zipped.
 pub struct Wacz {
     pub warc_file: Vec<u8>,
     pub data_package_bytes: Vec<u8>,

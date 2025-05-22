@@ -1,6 +1,6 @@
 use core::error::Error;
 use std::{fs, path::Path};
-use wacksy::{DataPackage, Wacz, indexer::CDXJIndex};
+use wacksy::{Wacz, datapackage::DataPackage, indexer::CDXJIndex};
 
 fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let warc_file_path: &Path = Path::new("examples/rec-e7e68da067d0-20250423121042981-0.warc.gz");
