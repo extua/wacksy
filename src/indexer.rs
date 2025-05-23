@@ -98,6 +98,42 @@ impl fmt::Display for CDXJIndex {
     }
 }
 
+/// A page which would make up
+/// a line in a pages.jsonl file.
+#[derive(Debug)]
+pub struct PageRecord {
+    /// The date and time when the web archive snapshot was created
+    pub timestamp: RecordTimestamp,
+    /// The URL that was archived
+    pub url: RecordUrl,
+    /// A string describing the resource
+    pub title: Option<PageTitle>,
+}
+
+/// A record which would make up
+/// a line in a CDX(J) index.
+#[derive(Debug)]
+pub struct CDXJIndexRecord {
+    /// The date and time when the web archive snapshot was created
+    pub timestamp: RecordTimestamp,
+    /// Sort-friendly formatted URL
+    pub searchable_url: String,
+    /// The URL that was archived
+    pub url: RecordUrl,
+    /// A cryptographic hash for the HTTP response payload       
+    pub digest: RecordDigest,
+    /// The media type for the response payload
+    pub mime: RecordContentType,
+    /// The WARC file where the WARC record is located
+    pub filename: WarcFilename,
+    /// The byte offset for the WARC record
+    pub offset: u64,
+    /// The length in bytes of the WARC record
+    pub length: u64,
+    // The HTTP status code for the HTTP response
+    pub status: RecordStatus,
+}
+
 impl CDXJIndexRecord {
     /// # Create index record
     ///
@@ -151,26 +187,6 @@ impl CDXJIndexRecord {
             return Err(CDXJIndexRecordError::UnindexableRecordType(warc_type));
         }
     }
-}
-
-#[derive(Debug)]
-pub struct CDXJIndexRecord {
-    pub timestamp: RecordTimestamp,
-    pub searchable_url: String,
-    /// The URL that was archived
-    pub url: RecordUrl,
-    /// A cryptographic hash for the HTTP response payload       
-    pub digest: RecordDigest,
-    /// The media type for the response payload
-    pub mime: RecordContentType,
-    /// The WARC file where the WARC record is located
-    pub filename: WarcFilename,
-    /// The byte offset for the WARC record
-    pub offset: u64,
-    /// The length in bytes of the WARC record
-    pub length: u64,
-    // The HTTP status code for the HTTP response
-    pub status: RecordStatus,
 }
 
 // Display the record as shown in the example in the
@@ -422,6 +438,27 @@ impl RecordStatus {
     }
 }
 impl fmt::Display for RecordStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        return write!(f, "{}", self.0);
+    }
+}
+
+#[derive(Debug)]
+pub struct PageTitle(String);
+
+// impl PageTitle {
+//     pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
+//         if let Some(record_digest) = record.header(WarcHeader::PayloadDigest) {
+//             return Ok(Self(record_digest.to_string()));
+//         } else {
+//             return Err(CDXJIndexRecordError::ValueNotFound(format!(
+//                 "Record {} does not have a payload digest in the WARC header",
+//                 record.warc_id()
+//             )));
+//         }
+//     }
+// }
+impl fmt::Display for PageTitle {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         return write!(f, "{}", self.0);
     }
