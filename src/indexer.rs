@@ -68,8 +68,9 @@ pub fn index_file(warc_file_path: &Path) -> Result<Index, std::io::Error> {
 
                     // Get the length of the record body in content_length,
                     // added to the length of the unwrapped record header
-                    let record_length: u64 = &record.content_length()
+                    let record_length: u64 = record.content_length()
                         + record.into_raw_parts().0.to_string().len() as u64;
+
 
                     // increment the byte counter after processing the record
                     byte_counter = byte_counter.wrapping_add(record_length);
@@ -132,8 +133,8 @@ pub struct PageRecord {
 }
 impl PageRecord {
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
-        let timestamp = RecordTimestamp::new(&record)?;
-        let url = RecordUrl::new(&record)?;
+        let timestamp = RecordTimestamp::new(record)?;
+        let url = RecordUrl::new(record)?;
 
         // first check whether the record is either
         // a response, revisit, resource, or metadata
@@ -164,7 +165,7 @@ impl PageRecord {
 impl fmt::Display for PageRecord {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let pages_json_string = serde_json::to_string(self).unwrap();
-        return write!(f, "{}", pages_json_string);
+        return write!(f, "{pages_json_string}");
     }
 }
 
@@ -208,13 +209,13 @@ impl CDXJIndexRecord {
         byte_counter: u64,
         warc_file_path: &Path,
     ) -> Result<Self, CDXJIndexRecordError> {
-        let timestamp = RecordTimestamp::new(&record)?;
-        let url = RecordUrl::new(&record)?;
-        let digest = RecordDigest::new(&record)?;
+        let timestamp = RecordTimestamp::new(record)?;
+        let url = RecordUrl::new(record)?;
+        let digest = RecordDigest::new(record)?;
         let searchable_url = url.as_searchable_string()?;
-        let mime = RecordContentType::new(&record)?;
-        let status = RecordStatus::new(&record)?;
-        let filename = WarcFilename::new(&record, warc_file_path)?;
+        let mime = RecordContentType::new(record)?;
+        let status = RecordStatus::new(record)?;
+        let filename = WarcFilename::new(record, warc_file_path)?;
 
         // first check whether the record is either
         // a response, revisit, resource, or metadata
