@@ -27,13 +27,13 @@ use warc::{BufferedBody, Record, RecordIter, RecordType, WarcReader};
 /// Will return a `std::io::Error` from
 /// `WarcReader::from_path`/`from_path_gzip`
 /// in case of any problem reading the Warc file.
-pub fn index_file(warc_file_path: &Path) -> Result<CDXJIndex, std::io::Error> {
+pub fn index_file(warc_file_path: &Path) -> Result<Index, std::io::Error> {
     // this looping function accepts a generic type which
     // this allows us to pass in both gzipped and non-gzipped records
     fn loop_over_records<T: Iterator<Item = Result<Record<BufferedBody>, warc::Error>>>(
         file_records: T,
         warc_file_path: &Path,
-    ) -> CDXJIndex {
+    ) -> Index {
         let mut record_count: usize = 0;
         let mut byte_counter: u64 = 0;
         let mut cdxj_index: Vec<CDXJIndexRecord> = Vec::with_capacity(1024);
@@ -86,7 +86,7 @@ pub fn index_file(warc_file_path: &Path) -> Result<CDXJIndex, std::io::Error> {
         }
         println!("Total records: {record_count}");
 
-        return CDXJIndex(cdxj_index);
+        return Index(CDXJIndex(cdxj_index), PageIndex(page_index));
     }
 
     if warc_file_path.extension() == Some(OsStr::new("gz")) {
@@ -101,6 +101,8 @@ pub fn index_file(warc_file_path: &Path) -> Result<CDXJIndex, std::io::Error> {
         return Ok(loop_over_records(file_records, warc_file_path));
     };
 }
+
+pub struct Index(pub CDXJIndex, pub PageIndex);
 
 pub struct CDXJIndex(Vec<CDXJIndexRecord>);
 impl fmt::Display for CDXJIndex {

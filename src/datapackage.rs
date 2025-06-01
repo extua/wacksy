@@ -85,7 +85,8 @@ impl DataPackage {
     /// or path of a resource.
     pub fn new(
         warc_file: &[u8],
-        index_file: &[u8],
+        cdxj_index_file: &[u8],
+        pages_index_file: &[u8],
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'static>> {
         let mut data_package = Self::default();
 
@@ -97,7 +98,12 @@ impl DataPackage {
 
         // add index file to datapackage
         let path: &Path = Path::new("indexes/index.cdxj");
-        let resource = DataPackageResource::new(path, index_file)?;
+        let resource = DataPackageResource::new(path, cdxj_index_file)?;
+        Self::add_resource(&mut data_package, resource);
+
+        // add index file to datapackage
+        let path: &Path = Path::new("pages.jsonl");
+        let resource = DataPackageResource::new(path, pages_index_file)?;
         Self::add_resource(&mut data_package, resource);
 
         return Ok(data_package);

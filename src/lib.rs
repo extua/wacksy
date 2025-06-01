@@ -13,7 +13,8 @@ pub struct Wacz {
     pub warc_file: Vec<u8>,
     pub data_package_bytes: Vec<u8>,
     pub data_package_digest_bytes: Vec<u8>,
-    pub index_bytes: Vec<u8>,
+    pub cdxj_index_bytes: Vec<u8>,
+    pub pages_index_bytes: Vec<u8>,
 }
 impl Wacz {
     fn add_file_to_archive(
@@ -84,8 +85,14 @@ impl Wacz {
         Self::add_file_to_archive(
             &mut archive,
             options,
-            &wacz_object.index_bytes,
+            &wacz_object.cdxj_index_bytes,
             "indexes/index.cdxj",
+        );
+        Self::add_file_to_archive(
+            &mut archive,
+            options,
+            &wacz_object.pages_index_bytes,
+            "pages.jsonl",
         );
 
         // Finish the archive, which will write the central directory.
