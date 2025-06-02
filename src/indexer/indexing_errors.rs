@@ -1,7 +1,7 @@
 use std::error::Error;
 
 #[derive(Debug)]
-pub enum CDXJIndexRecordError {
+pub enum IndexingError {
     RecordTimestampError(chrono::ParseError),
     WarcFilenameError(String),
     RecordContentTypeError(String),
@@ -10,7 +10,7 @@ pub enum CDXJIndexRecordError {
     ValueNotFound(String),
     UnindexableRecordType(warc::RecordType),
 }
-impl std::fmt::Display for CDXJIndexRecordError {
+impl std::fmt::Display for IndexingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::RecordTimestampError(parse_error_message) => {
@@ -41,7 +41,7 @@ impl std::fmt::Display for CDXJIndexRecordError {
         }
     }
 }
-impl Error for CDXJIndexRecordError {
+impl Error for IndexingError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::RecordTimestampError(parse_error) => return Some(parse_error),

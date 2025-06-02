@@ -6,8 +6,8 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 
-mod cdxj_index_errors;
-use cdxj_index_errors::CDXJIndexRecordError;
+mod indexing_errors;
+use indexing_errors::IndexingError;
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use url::{Position, Url};
@@ -132,7 +132,7 @@ pub struct PageRecord {
     pub title: Option<PageTitle>,
 }
 impl PageRecord {
-    pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
+    pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
         let timestamp = RecordTimestamp::new(record)?;
         let url = RecordUrl::new(record)?;
 
@@ -157,7 +157,7 @@ impl PageRecord {
             // return an error
             let warc_type = record.warc_type().clone();
             // change this to a generic indexing error?
-            return Err(CDXJIndexRecordError::UnindexableRecordType(warc_type));
+            return Err(IndexingError::UnindexableRecordType(warc_type));
         }
     }
 }
@@ -208,7 +208,7 @@ impl CDXJIndexRecord {
         record: &Record<BufferedBody>,
         byte_counter: u64,
         warc_file_path: &Path,
-    ) -> Result<Self, CDXJIndexRecordError> {
+    ) -> Result<Self, IndexingError> {
         let timestamp = RecordTimestamp::new(record)?;
         let url = RecordUrl::new(record)?;
         let digest = RecordDigest::new(record)?;
@@ -243,7 +243,7 @@ impl CDXJIndexRecord {
             // if the record is not one of the types we want,
             // return an error
             let warc_type = record.warc_type().clone();
-            return Err(CDXJIndexRecordError::UnindexableRecordType(warc_type));
+            return Err(IndexingError::UnindexableRecordType(warc_type));
         }
     }
 }
@@ -274,16 +274,16 @@ impl fmt::Display for CDXJIndexRecord {
 pub struct RecordTimestamp(DateTime<chrono::FixedOffset>);
 
 impl RecordTimestamp {
-    pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
+    pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
         match record.header(WarcHeader::Date) {
             Some(warc_header_date) => match DateTime::parse_from_rfc3339(&warc_header_date) {
                 Ok(parsed_datetime) => return Ok(Self(parsed_datetime)),
                 Err(parsing_error) => {
-                    return Err(CDXJIndexRecordError::RecordTimestampError(parsing_error));
+                    return Err(IndexingError::RecordTimestampError(parsing_error));
                 }
             },
             None => {
-                return Err(CDXJIndexRecordError::ValueNotFound(format!(
+                return Err(IndexingError::ValueNotFound(format!(
                     "Record {} does not have a date in the WARC header",
                     record.warc_id()
                 )));
@@ -304,7 +304,7 @@ impl WarcFilename {
     pub fn new(
         record: &Record<BufferedBody>,
         warc_file_path: &Path,
-    ) -> Result<Self, CDXJIndexRecordError> {
+    ) -> Result<Self, IndexingError> {
         if let Some(record_filename) = record.header(WarcHeader::Filename) {
             println!("record filename is {record_filename} from file");
             return Ok(Self(record_filename.into_owned()));
@@ -316,7 +316,7 @@ impl WarcFilename {
             } else {
                 // Hit this error case if the filename
                 // cannot be inferred from the Path
-                return Err(CDXJIndexRecordError::WarcFilenameError(format!(
+                return Err(IndexingError::WarcFilenameError(format!(
                     "Cannot infer filename from {}",
                     warc_file_path.to_string_lossy()
                 )));
@@ -334,11 +334,11 @@ impl fmt::Display for WarcFilename {
 pub struct RecordDigest(String);
 
 impl RecordDigest {
-    pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
+    pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
         if let Some(record_digest) = record.header(WarcHeader::PayloadDigest) {
             return Ok(Self(record_digest.to_string()));
         } else {
-            return Err(CDXJIndexRecordError::ValueNotFound(format!(
+            return Err(IndexingError::ValueNotFound(format!(
                 "Record {} does not have a payload digest in the WARC header",
                 record.warc_id()
             )));
@@ -355,7 +355,7 @@ impl fmt::Display for RecordDigest {
 pub struct RecordContentType(String);
 
 impl RecordContentType {
-    pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
+    pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
         // beware! the warc content type is not the same
         // as the record content type in order to actually
         // do anything about this we need to read
@@ -372,7 +372,7 @@ impl RecordContentType {
             match response.parse(record.body()) {
                 Ok(status) => status,
                 Err(http_parsing_error) => {
-                    return Err(CDXJIndexRecordError::RecordContentTypeError(
+                    return Err(IndexingError::RecordContentTypeError(
                         http_parsing_error.to_string(),
                     ));
                 }
@@ -390,13 +390,13 @@ impl RecordContentType {
                 Some(some_content_type) => match some_content_type {
                     Ok(parsed_content_type) => return Ok(Self(parsed_content_type.to_owned())),
                     Err(parsing_error) => {
-                        return Err(CDXJIndexRecordError::RecordContentTypeError(
+                        return Err(IndexingError::RecordContentTypeError(
                             parsing_error.to_string(),
                         ));
                     }
                 },
                 None => {
-                    return Err(CDXJIndexRecordError::ValueNotFound(
+                    return Err(IndexingError::ValueNotFound(
                         "could not find content type in HTTP headers".to_owned(),
                     ));
                 }
@@ -414,14 +414,14 @@ impl fmt::Display for RecordContentType {
 pub struct RecordUrl(Url);
 
 impl RecordUrl {
-    pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
+    pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
         if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
             match Url::parse(&warc_header_url) {
                 Ok(record_url) => return Ok(Self(record_url)),
-                Err(parse_error) => return Err(CDXJIndexRecordError::RecordUrlError(parse_error)),
+                Err(parse_error) => return Err(IndexingError::RecordUrlError(parse_error)),
             }
         } else {
-            return Err(CDXJIndexRecordError::ValueNotFound(
+            return Err(IndexingError::ValueNotFound(
                 "TargetURI not present in the WARC header".to_owned(),
             ));
         }
@@ -434,7 +434,7 @@ impl RecordUrl {
     /// Errors
     ///
     /// Will return `ValueNotFound` if the url does not have a host.
-    pub fn as_searchable_string(&self) -> Result<String, CDXJIndexRecordError> {
+    pub fn as_searchable_string(&self) -> Result<String, IndexingError> {
         if let Some(host) = self.0.host_str() {
             // split the host string into an array at each dot
             let mut host_split: Vec<&str> = host.split('.').collect();
@@ -449,7 +449,7 @@ impl RecordUrl {
         } else {
             // print the full url here
             let url = self.0.as_str();
-            return Err(CDXJIndexRecordError::ValueNotFound(format!(
+            return Err(IndexingError::ValueNotFound(format!(
                 "{url} does not have a host, unable to construct a searchable string"
             )));
         }
@@ -476,7 +476,7 @@ impl RecordStatus {
     /// Will return a `RecordStatusError`,
     /// which can contain either a _parsing_ error from httparse,
     /// or an error arising from an empty response code.
-    pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
+    pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
         let mut headers = [httparse::EMPTY_HEADER; 64];
         let mut response = httparse::Response::new(&mut headers);
 
@@ -484,13 +484,13 @@ impl RecordStatus {
             Ok(_) => match response.code {
                 Some(response_code) => return Ok(Self(response_code)),
                 None => {
-                    return Err(CDXJIndexRecordError::RecordStatusError(
+                    return Err(IndexingError::RecordStatusError(
                         "response code is empty".to_owned(),
                     ));
                 }
             },
             Err(http_parsing_error) => {
-                return Err(CDXJIndexRecordError::RecordStatusError(
+                return Err(IndexingError::RecordStatusError(
                     http_parsing_error.to_string(),
                 ));
             }
@@ -507,11 +507,11 @@ impl fmt::Display for RecordStatus {
 pub struct PageTitle(String);
 
 // impl PageTitle {
-//     pub fn new(record: &Record<BufferedBody>) -> Result<Self, CDXJIndexRecordError> {
+//     pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
 //         if let Some(record_digest) = record.header(WarcHeader::PayloadDigest) {
 //             return Ok(Self(record_digest.to_string()));
 //         } else {
-//             return Err(CDXJIndexRecordError::ValueNotFound(format!(
+//             return Err(IndexingError::ValueNotFound(format!(
 //                 "Record {} does not have a payload digest in the WARC header",
 //                 record.warc_id()
 //             )));
