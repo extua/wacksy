@@ -1,4 +1,4 @@
-use std::error::Error;
+use core::error::Error;
 
 #[derive(Debug)]
 pub enum IndexingError {
@@ -11,7 +11,7 @@ pub enum IndexingError {
     UnindexableRecordType(warc::RecordType),
 }
 impl std::fmt::Display for IndexingError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::RecordTimestampError(parse_error_message) => {
                 return write!(f, "Could not get record timestamp: {parse_error_message}");
