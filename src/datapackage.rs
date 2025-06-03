@@ -102,7 +102,7 @@ impl DataPackage {
         Self::add_resource(&mut data_package, resource);
 
         // add index file to datapackage
-        let path: &Path = Path::new("pages.jsonl");
+        let path: &Path = Path::new("pages/pages.jsonl");
         let resource = DataPackageResource::new(path, pages_index_file)?;
         Self::add_resource(&mut data_package, resource);
 

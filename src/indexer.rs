@@ -399,12 +399,12 @@ impl RecordContentType {
     /// the record body; this is not the same as the
     /// [content type from the WARC header](https://iipc.github.io/warc-specifications/specifications/warc-format/warc-1.1/#content-type),
     /// which would ususally be `application/http`.
-    /// 
+    ///
     /// If the WARC record type is `revisit`, in which case the spec
     /// says to directly return that as the content type.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns a `RecordContentTypeError` in case of any problems with
     /// parsing; this either wraps `httparse::Error`, or a `Utf8Error` when
     /// parsing the content type to string. Alternatively returns `ValueNotFound`
@@ -463,11 +463,11 @@ pub struct RecordUrl(Url);
 
 impl RecordUrl {
     /// # Get the url of the record
-    /// 
+    ///
     /// Get the url from the `WarcHeader::TargetURI` field.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns `RecordUrlError` if there is any problem parsing
     /// the Url, this is a wrapper for `url::ParseError`.
     /// Alternatively returns `ValueNotFound` if no `TargetURI` field

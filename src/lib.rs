@@ -31,7 +31,7 @@ impl Wacz {
         let mut writer = ZipDataWriter::new(&mut file);
 
         // Copy the data to the writer.
-        std::io::copy(&mut &file_data[..], &mut writer).unwrap();
+        std::io::copy(&mut &*file_data, &mut writer).unwrap();
 
         // Finish the file, which will return the finalized data descriptor
         let (_, descriptor) = writer.finish().unwrap();
@@ -92,7 +92,7 @@ impl Wacz {
             &mut archive,
             options,
             &wacz_object.pages_index_bytes,
-            "pages.jsonl",
+            "pages/pages.jsonl",
         );
 
         // Finish the archive, which will write the central directory.
