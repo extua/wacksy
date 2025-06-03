@@ -7,8 +7,8 @@ use std::io::BufReader;
 use std::path::Path;
 
 mod indexing_errors;
-use indexing_errors::IndexingError;
 use chrono::DateTime;
+use indexing_errors::IndexingError;
 use serde::{Deserialize, Serialize};
 use url::{Position, Url};
 
@@ -71,7 +71,6 @@ pub fn index_file(warc_file_path: &Path) -> Result<Index, std::io::Error> {
                     let record_length: u64 = record.content_length()
                         + record.into_raw_parts().0.to_string().len() as u64;
 
-
                     // increment the byte counter after processing the record
                     byte_counter = byte_counter.wrapping_add(record_length);
                 }
@@ -132,6 +131,16 @@ pub struct PageRecord {
     pub title: Option<PageTitle>,
 }
 impl PageRecord {
+    /// # Create page record
+    ///
+    /// Takes a `Record<BufferedBody>` and extracts the
+    /// timestamp and url for the pages.jsonl file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `UnindexableRecordType` error if the record is not
+    /// a Warc `response`, `revisit`, or `resource`. Otherwise, returns
+    /// corresponding errors for url and timestamp fields.
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
         let timestamp = RecordTimestamp::new(record)?;
         let url = RecordUrl::new(record)?;
@@ -142,7 +151,6 @@ impl PageRecord {
             RecordType::Response,
             RecordType::Revisit,
             RecordType::Resource,
-            RecordType::Metadata,
         ]
         .contains(record.warc_type())
         {
@@ -194,7 +202,7 @@ pub struct CDXJIndexRecord {
 }
 
 impl CDXJIndexRecord {
-    /// # Create index record
+    /// # Create CDXJ index record
     ///
     /// Takes a `Record<BufferedBody>` and parses it to extract all
     /// the fields which make up a CDX(J) record.
@@ -274,6 +282,16 @@ impl fmt::Display for CDXJIndexRecord {
 pub struct RecordTimestamp(DateTime<chrono::FixedOffset>);
 
 impl RecordTimestamp {
+    /// # Get timestamp
+    ///
+    /// Get the timestamp from the WARC header field `WarcHeader::Date`,
+    /// parse it to a `DateTime<FixedOffset>`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `RecordTimestampError` if there is a problem with
+    /// parsing, and this wraps `chrono::ParseError`. Otherwise returns
+    /// `ValueNotFound` if there is no date in the WARC header.
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
         match record.header(WarcHeader::Date) {
             Some(warc_header_date) => match DateTime::parse_from_rfc3339(&warc_header_date) {
@@ -301,6 +319,17 @@ impl fmt::Display for RecordTimestamp {
 pub struct WarcFilename(String);
 
 impl WarcFilename {
+    /// # Create Warc filename
+    ///
+    /// Takes the filename from `WarcHeader::Filename`, and converts it
+    /// to a string. If no filename is found in the record this function
+    /// reads the path to the warc file.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `WarcFilenameError` error if the filename cannot be
+    /// inferred from the file path. Normally you should not hit this
+    /// error.
     pub fn new(
         record: &Record<BufferedBody>,
         warc_file_path: &Path,
@@ -334,6 +363,15 @@ impl fmt::Display for WarcFilename {
 pub struct RecordDigest(String);
 
 impl RecordDigest {
+    /// # Get Warc digest
+    ///
+    /// Takes the digest from from `WarcHeader::PayloadDigest`, and
+    /// returns it as a string.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ValueNotFound` error if no payload digest is found
+    /// in the WARC header.
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
         if let Some(record_digest) = record.header(WarcHeader::PayloadDigest) {
             return Ok(Self(record_digest.to_string()));
@@ -355,14 +393,24 @@ impl fmt::Display for RecordDigest {
 pub struct RecordContentType(String);
 
 impl RecordContentType {
+    /// # Parse record content type
+    ///
+    /// Parses the HTTP content type from the HTTP headers in
+    /// the record body; this is not the same as the
+    /// [content type from the WARC header](https://iipc.github.io/warc-specifications/specifications/warc-format/warc-1.1/#content-type),
+    /// which would ususally be `application/http`.
+    /// 
+    /// If the WARC record type is `revisit`, in which case the spec
+    /// says to directly return that as the content type.
+    /// 
+    /// # Errors
+    /// 
+    /// Returns a `RecordContentTypeError` in case of any problems with
+    /// parsing; this either wraps `httparse::Error`, or a `Utf8Error` when
+    /// parsing the content type to string. Alternatively returns `ValueNotFound`
+    /// if no content type is found in the HTTP headers.
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
-        // beware! the warc content type is not the same
-        // as the record content type in order to actually
-        // do anything about this we need to read
-        // the record body
         if record.warc_type() == &RecordType::Revisit {
-            // If the WARC record type is revisit,
-            // that's the content type
             return Ok(Self("revisit".to_owned()));
         } else {
             // create a list of 64 empty headers, if this is not
@@ -397,7 +445,7 @@ impl RecordContentType {
                 },
                 None => {
                     return Err(IndexingError::ValueNotFound(
-                        "could not find content type in HTTP headers".to_owned(),
+                        "content type not present in HTTP headers".to_owned(),
                     ));
                 }
             };
@@ -414,6 +462,16 @@ impl fmt::Display for RecordContentType {
 pub struct RecordUrl(Url);
 
 impl RecordUrl {
+    /// # Get the url of the record
+    /// 
+    /// Get the url from the `WarcHeader::TargetURI` field.
+    /// 
+    /// # Errors
+    /// 
+    /// Returns `RecordUrlError` if there is any problem parsing
+    /// the Url, this is a wrapper for `url::ParseError`.
+    /// Alternatively returns `ValueNotFound` if no `TargetURI` field
+    /// is present in the WARC header.
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
         if let Some(warc_header_url) = record.header(WarcHeader::TargetURI) {
             match Url::parse(&warc_header_url) {
@@ -426,14 +484,14 @@ impl RecordUrl {
             ));
         }
     }
-    /// Compose searchable string
+    /// # Compose searchable string
     ///
     /// Take a url and return a Sort-friendly URI Reordering Transform (SURT)
     /// formatted string. It is cast to lowercase when displayed.
     ///
-    /// Errors
+    /// # Errors
     ///
-    /// Will return `ValueNotFound` if the url does not have a host.
+    /// Returns `ValueNotFound` if the url does not have a host.
     pub fn as_searchable_string(&self) -> Result<String, IndexingError> {
         if let Some(host) = self.0.host_str() {
             // split the host string into an array at each dot
@@ -466,16 +524,16 @@ impl fmt::Display for RecordUrl {
 pub struct RecordStatus(u16);
 
 impl RecordStatus {
-    /// # Record status
+    /// # Parse record status
     ///
-    /// Parse the record body with httparse and get
-    /// the status code from the response.
+    /// Parse the record body with httparse and get the status code
+    /// from the response.
     ///
     /// # Errors
     ///
-    /// Will return a `RecordStatusError`,
-    /// which can contain either a _parsing_ error from httparse,
-    /// or an error arising from an empty response code.
+    /// Returns a `RecordStatusError`, which can contain either
+    /// a _parsing_ error from httparse, or an error arising
+    /// from an empty response code.
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
         let mut headers = [httparse::EMPTY_HEADER; 64];
         let mut response = httparse::Response::new(&mut headers);
@@ -503,21 +561,22 @@ impl fmt::Display for RecordStatus {
     }
 }
 
+// This has not been properly implemented yet!
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PageTitle(String);
 
-// impl PageTitle {
-//     pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
-//         if let Some(record_digest) = record.header(WarcHeader::PayloadDigest) {
-//             return Ok(Self(record_digest.to_string()));
-//         } else {
-//             return Err(IndexingError::ValueNotFound(format!(
-//                 "Record {} does not have a payload digest in the WARC header",
-//                 record.warc_id()
-//             )));
-//         }
-//     }
-// }
+impl PageTitle {
+    // pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
+    //     if let Some(record_digest) = record.header(WarcHeader::PayloadDigest) {
+    //         return Ok(Self(record_digest.to_string()));
+    //     } else {
+    //         return Err(IndexingError::ValueNotFound(format!(
+    //             "Record {} does not have a payload digest in the WARC header",
+    //             record.warc_id()
+    //         )));
+    //     }
+    // }
+}
 impl fmt::Display for PageTitle {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         return write!(f, "{}", self.0);
