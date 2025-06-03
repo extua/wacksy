@@ -128,6 +128,7 @@ pub struct PageRecord {
     /// The URL that was archived
     pub url: RecordUrl,
     /// A string describing the resource
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<PageTitle>,
 }
 impl PageRecord {
