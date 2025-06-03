@@ -7,44 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.0.1-beta.1](https://github.com/extua/wacksy/compare/v0.0.1-beta...v0.0.1-beta.1) - 2025-06-03
+## [0.0.1](https://github.com/extua/wacksy/compare/v0.0.1-beta...v0.0.1) - 2025-06-03
 
 ### Added
 
-- add pages indexer to wacz writer, closes #30
-- *(indexer)* add struct for page records
-
-### Fixed
-
-- *(datapackage)* add cdxj_index_bytes through to the datapackage
-- pages.jsonl path is under pages directory
-- *(citation)* citation name the wrong way around
+- Add preliminary pages indexer to WACZ writer and refactored the indexer so it produces pages.jsonl and index.cdxj in the same pass through the file.
+- *(indexer)* Use type generics to eliminate code duplication when iterating through records, this finally gets rid of an awkward situation where I was having to maintain two separate iterators .
 
 ### Other
 
-- *(indexer)* use core instead of standard libraries for error formatting
-- *(indexer)* add inline documentation for all indexer functions, closes #34
-- *(indexer)* rename CDXJIndexError to more generic IndexingError
-- *(indexer)* revert borrowing where unnecessary
-- initial work to index pages
-- add serde features to dependencies, update cargofile
-- *(deps)* bump rawzip from 0.1.0 to 0.2.0 in the minor-bumps group ([#35](https://github.com/extua/wacksy/pull/35))
-- *(indexer)* more documentation, changed error types for CDXJIndex
-- *(indexer)* use core::error rather than std::error
-- link bodleian site in readme
-- don't re-export datapackage types
-- move zip_dir into Wacz object trait
-- *(indexer)* clarify shadowed variables
-- *(datapackage)* move compose_datapackage into datapackage implementation
-- *(indexer)* add documentation to functions
-- *(datapackage)* DataPackageResource::new now returns a result/error rather than panicking
-- *(citation)* add reference to WACZ standard, fixes #7
-- add documentation to types
-- *(indexer)* use type generics to eliminate code duplication
-- update cargofile with release profile flags
-- *(indexer)* use httparse to parse http status code from response
-- *(indexer)* remove the happily redundant cut_http_headers_from_record function
-- add info and badges to readme
+- *(docs)* The other main thing in this release is that all functions in the indexer have inline documentation.
+- *(indexer)* use `core::error` rather than `std::error`
+- Move zip_dir into Wacz object trait.
+- *(datapackage)* DataPackageResource::new now returns a result/error rather than panicking.
+- *(indexer)* Use httparse to parse http status code from response and remove the happily redundant cut_http_headers_from_record function.
+
+There are still opportunities to panic in `lib.rs`.
 
 ## [0.0.1-beta](https://github.com/extua/wacksy/compare/v0.0.1-alpha...v0.0.1-beta) - 2025-05-16
 
