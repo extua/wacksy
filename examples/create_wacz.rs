@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let cdxj_index_bytes = index.0.to_string().into_bytes();
     let pages_index_bytes = index.1.to_string().into_bytes();
 
-    let data_package = DataPackage::new(&warc_file, &pages_index_bytes, &pages_index_bytes)?;
+    let data_package = DataPackage::new(&warc_file, &cdxj_index_bytes, &pages_index_bytes)?;
     let data_package_digest = DataPackage::digest(&data_package)?;
 
     let data_package_digest_bytes = serde_json::to_vec(&data_package_digest)?;
