@@ -563,6 +563,7 @@ impl fmt::Display for RecordStatus {
 }
 
 // This has not been properly implemented yet!
+#[doc(hidden)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PageTitle(String);
 
