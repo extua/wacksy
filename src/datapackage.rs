@@ -35,8 +35,7 @@ use std::{error::Error, path::Path};
 
 use crate::WACZ_VERSION;
 
-/// This struct defines a [frictionless
-/// datapackage](https://specs.frictionlessdata.io/data-package/).
+/// A [frictionless datapackage](https://specs.frictionlessdata.io/data-package/).
 #[derive(Serialize, Deserialize)]
 pub struct DataPackage {
     pub profile: String,
@@ -56,6 +55,7 @@ pub struct DataPackageResource {
     pub bytes: usize,
 }
 
+/// A digest of the datapackage file itself.
 #[derive(Serialize, Deserialize)]
 pub struct DataPackageDigest {
     pub path: String,
