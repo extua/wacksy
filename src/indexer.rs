@@ -174,7 +174,7 @@ impl PageRecord {
 impl fmt::Display for PageRecord {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let pages_json_string = serde_json::to_string(self).unwrap();
-        return write!(f, "{pages_json_string}\n");
+        return writeln!(f, "{pages_json_string}");
     }
 }
 
