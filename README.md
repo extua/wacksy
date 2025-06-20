@@ -1,10 +1,8 @@
 # Wacksy
 
-[![SWH](https://archive.softwareheritage.org/badge/swh:1:dir:ce81998f0400b211fff19416668bb22d9c53c441/)](https://archive.softwareheritage.org/swh:1:dir:ce81998f0400b211fff19416668bb22d9c53c441;origin=https://github.com/extua/wacksy;visit=swh:1:snp:701dca05ae362b4f3de5d31a2ad5387fa68f02cf;anchor=swh:1:rev:1d054902a74084c8e67798a561d7efe573418e70)
+[![SWH](https://archive.softwareheritage.org/badge/swh:1:snp:4946a5fe3e15fa0c3e9e68cd5b3816cf80f733d6/)](https://archive.softwareheritage.org/swh:1:snp:4946a5fe3e15fa0c3e9e68cd5b3816cf80f733d6;origin=https://github.com/extua/wacksy)
 
 An experimental Rust library for reading and writing WACZ files.
-
-<!-- purpose of this library -->
 
 ## Install
 
