@@ -14,10 +14,11 @@ The last thing missing was the pages.jsonl file, which is now produced when read
 I want to avoid reading through the WARC twice to produce two files, so have wrapped everything into one indexer, again there's probably a better way of doing this.
 
 The other happy change in this release is removing code duplication from the WARC reader in case of gzipped and non-gzipped files.
-I learned about generics!
+First time I've tried using type generics in Rust, the code is messy, but it works.
 
 ### Added
 
+- *(indexer)* Use type generics to eliminate code duplication when iterating through records, this finally gets rid of an awkward situation where I was having to maintain two separate iterators .
 - add pages indexer to wacz writer, with a struct for page records, this is the main thing in this release.
 
 ### Fixed
