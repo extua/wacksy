@@ -5,7 +5,9 @@ pub mod datapackage;
 pub mod indexer;
 use rawzip::{CompressionMethod, Error, ZipArchiveWriter, ZipDataWriter, ZipEntryOptions};
 
-const WACZ_VERSION: &str = "1.1.1"; // deprecated in WACZ 1.2.0
+/// Set the WACZ version of the file being created,
+/// deprecated in WACZ 1.2.0.
+pub const WACZ_VERSION: &str = "1.1.1";
 
 /// This struct contains various resources as
 /// byte arrays, ready to be zipped.
