@@ -1,4 +1,5 @@
 use core::error::Error;
+use core::fmt::{Display, Formatter, Result};
 
 #[derive(Debug)]
 pub enum IndexingError {
@@ -10,8 +11,8 @@ pub enum IndexingError {
     ValueNotFound(String),
     UnindexableRecordType(warc::RecordType),
 }
-impl std::fmt::Display for IndexingError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl Display for IndexingError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             Self::RecordTimestampError(parse_error_message) => {
                 return write!(f, "Could not get record timestamp: {parse_error_message}");

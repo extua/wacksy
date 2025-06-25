@@ -10,7 +10,8 @@ mod indexing_errors;
 use chrono::DateTime;
 use indexing_errors::IndexingError;
 use serde::{Deserialize, Serialize};
-use url::{Position, Url};
+use surt_rs::generate_surt;
+use url::Url;
 
 use libflate::gzip::MultiDecoder;
 use warc::WarcHeader;
@@ -470,7 +471,7 @@ impl RecordUrl {
     /// # Errors
     ///
     /// Returns `RecordUrlError` if there is any problem parsing
-    /// the Url, this is a wrapper for `url::ParseError`.
+    /// the url, this is a wrapper for `url::ParseError`.
     /// Alternatively returns `ValueNotFound` if no `TargetURI` field
     /// is present in the WARC header.
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
@@ -488,23 +489,21 @@ impl RecordUrl {
     /// # Compose searchable string
     ///
     /// Take a url and return a Sort-friendly URI Reordering Transform (SURT)
-    /// formatted string. It is cast to lowercase when displayed.
+    /// formatted string. It is cast to lowercase when displayed. This function
+    /// relies on the [surt-rs](https://github.com/mijho/surt-rs) crate.
     ///
     /// # Errors
     ///
-    /// Returns `ValueNotFound` if the url does not have a host.
+    /// Returns `ValueNotFound` if the url does not have a host, or a `RecordUrlError`
+    /// as a wrapper for `url::ParseError` if there is any problem parsin g the url.
     pub fn as_searchable_string(&self) -> Result<String, IndexingError> {
         if let Some(host) = self.0.host_str() {
-            // split the host string into an array at each dot
-            let mut host_split: Vec<&str> = host.split('.').collect();
-            // reverse the order of the array
-            host_split.reverse();
-            // join the array back into a comma-separated string
-            let host_reversed = host_split.join(",");
-            // capture everything else on the end of the url
-            let url_path = &self.0[Position::BeforePath..];
-            // put it all together
-            return Ok(format!("{host_reversed}){url_path}"));
+            match generate_surt(host) {
+                Ok(sorted_url) => return Ok(sorted_url),
+                Err(sorting_parse_error) => {
+                    return Err(IndexingError::RecordUrlError(sorting_parse_error));
+                }
+            }
         } else {
             // print the full url here
             let url = self.0.as_str();
