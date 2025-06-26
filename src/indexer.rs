@@ -494,22 +494,14 @@ impl RecordUrl {
     ///
     /// # Errors
     ///
-    /// Returns `ValueNotFound` if the url does not have a host, or a `RecordUrlError`
-    /// as a wrapper for `url::ParseError` if there is any problem parsin g the url.
+    /// Returns a `RecordUrlError` as a wrapper for `url::ParseError`
+    /// if there is any problem parsing the url.
     pub fn as_searchable_string(&self) -> Result<String, IndexingError> {
-        if let Some(host) = self.0.host_str() {
-            match generate_surt(host) {
-                Ok(sorted_url) => return Ok(sorted_url),
-                Err(sorting_parse_error) => {
-                    return Err(IndexingError::RecordUrlError(sorting_parse_error));
-                }
+        match generate_surt(self.0.as_str()) {
+            Ok(sorted_url) => return Ok(sorted_url),
+            Err(sorting_parse_error) => {
+                return Err(IndexingError::RecordUrlError(sorting_parse_error));
             }
-        } else {
-            // print the full url here
-            let url = self.0.as_str();
-            return Err(IndexingError::ValueNotFound(format!(
-                "{url} does not have a host, unable to construct a searchable string"
-            )));
         }
     }
 }
