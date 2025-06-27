@@ -105,6 +105,7 @@ pub fn index_file(warc_file_path: &Path) -> Result<Index, std::io::Error> {
 
 pub struct Index(pub CDXJIndex, pub PageIndex);
 
+/// This index struct contains a list of individual [CDX(J) Records](CDXJIndexRecord).
 pub struct CDXJIndex(Vec<CDXJIndexRecord>);
 impl fmt::Display for CDXJIndex {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
