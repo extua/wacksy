@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.2](https://github.com/extua/wacksy/compare/v0.0.1...v0.0.2) - 2025-07-02
+
+### Fixed
+
+- pass entire url to as_searchable_string, fixes #32
+
+### Other
+
+- use std imports instead of core and allow it in cargo file
+- small description of CDXJIndex struct
+- use surt-rs crate in create_searchable_string function
+- WACZ version is public and documented
+- *(indexer)* writeln instead of adding newline to string
+
 ## [0.0.1](https://github.com/extua/wacksy/compare/v0.0.1-beta...v0.0.1) - 2025-06-20
 
 As of this point, the WACZ and indexer can output (almost) everything needed from a WARC file to a fully spec-compliant WACZ file.
