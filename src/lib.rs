@@ -3,7 +3,7 @@
 
 pub mod datapackage;
 pub mod indexer;
-use rawzip::{CompressionMethod, Error, ZipArchiveWriter, ZipDataWriter, ZipEntryOptions};
+use rawzip::{CompressionMethod, Error, ZipArchiveWriter, ZipDataWriter};
 
 /// Set the WACZ version of the file being created,
 /// deprecated in WACZ 1.2.0.
@@ -21,12 +21,12 @@ pub struct Wacz {
 impl Wacz {
     fn add_file_to_archive(
         archive: &mut ZipArchiveWriter<&mut Vec<u8>>,
-        options: ZipEntryOptions,
+        compression_method: CompressionMethod,
         file_data: &[u8],
         file_path: &str,
     ) {
         // Start a new file in our zip archive.
-        let mut file = archive.new_file(file_path, options).unwrap();
+        let mut file = archive.new_file(file_path).compression_method(compression_method).create().unwrap();
 
         // Wrap the file in a ZipDataWriter, which will track information for the
         // Zip data descriptor (like uncompressed size and crc).
@@ -60,39 +60,39 @@ impl Wacz {
         let mut output = Vec::new();
         let mut archive = ZipArchiveWriter::new(&mut output);
 
-        // Set options, with no compression.
-        let options = ZipEntryOptions::default().compression_method(CompressionMethod::Store);
+        // Set compression method to Store (no compression).
+        let compression_method = CompressionMethod::Store;
 
         // this should be an iterator?
         // iterate over everything in the struct and add it recursively
         Self::add_file_to_archive(
             &mut archive,
-            options,
+            compression_method,
             &wacz_object.warc_file,
             // at this point if the file is gzipped, the file should be 'data.gz'
             "archive/data.warc",
         );
         Self::add_file_to_archive(
             &mut archive,
-            options,
+            compression_method,
             &wacz_object.data_package_bytes,
             "datapackage.json",
         );
         Self::add_file_to_archive(
             &mut archive,
-            options,
+            compression_method,
             &wacz_object.data_package_digest_bytes,
             "datapackage-digest.json",
         );
         Self::add_file_to_archive(
             &mut archive,
-            options,
+            compression_method,
             &wacz_object.cdxj_index_bytes,
             "indexes/index.cdxj",
         );
         Self::add_file_to_archive(
             &mut archive,
-            options,
+            compression_method,
             &wacz_object.pages_index_bytes,
             "pages/pages.jsonl",
         );
