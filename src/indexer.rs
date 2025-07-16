@@ -1,20 +1,19 @@
 //! Reads the WARC file and composes a CDX(J) index.
 
-use std::{fmt, str,ffi::OsStr};
+use chrono::DateTime;
+use libflate::gzip::MultiDecoder;
+use serde::{Deserialize, Serialize};
+use std::ffi::OsStr;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-
-mod indexing_errors;
-use chrono::DateTime;
-use indexing_errors::IndexingError;
-use serde::{Deserialize, Serialize};
+use std::{fmt, str};
 use surt_rs::generate_surt;
 use url::Url;
+use warc::{BufferedBody, Record, RecordIter, RecordType, WarcHeader, WarcReader};
 
-use libflate::gzip::MultiDecoder;
-use warc::WarcHeader;
-use warc::{BufferedBody, Record, RecordIter, RecordType, WarcReader};
+mod indexing_errors;
+use indexing_errors::IndexingError;
 
 /// # Indexer
 ///

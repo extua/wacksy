@@ -26,7 +26,11 @@ impl Wacz {
         file_path: &str,
     ) {
         // Start a new file in our zip archive.
-        let mut file = archive.new_file(file_path).compression_method(compression_method).create().unwrap();
+        let mut file = archive
+            .new_file(file_path)
+            .compression_method(compression_method)
+            .create()
+            .unwrap();
 
         // Wrap the file in a ZipDataWriter, which will track information for the
         // Zip data descriptor (like uncompressed size and crc).
