@@ -1,4 +1,4 @@
-use core::error::Error;
+use std::error::Error;
 use std::{fs, path::Path};
 use wacksy::{Wacz, datapackage::DataPackage, indexer::index_file};
 
