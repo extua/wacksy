@@ -27,6 +27,11 @@ pages
 └── pages.jsonl
 ```
 
+### Similar libraries
+
+* [py-wacz](github.com/webrecorder/py-wacz) for python
+* [js-wacz](https://github.com/harvard-lil/js-wacz) for javascript
+
 ## License
 
 [MIT](https://github.com/extua/wacksy/blob/main/LICENSE) © [Bodleian Libraries](https://www.bodleian.ox.ac.uk/) and contributors
