@@ -29,7 +29,7 @@ pages
 
 ### Similar libraries
 
-* [py-wacz](github.com/webrecorder/py-wacz) for python
+* [py-wacz](https://github.com/webrecorder/py-wacz) for python
 * [js-wacz](https://github.com/harvard-lil/js-wacz) for javascript
 
 ## License
