@@ -6,19 +6,19 @@
 //! {
 //!   "profile": "data-package",
 //!   "wacz_version": "1.1.1",
-//!   "created": "2025-05-16T11:03:03.499792020+01:00",
-//!   "software": "wacksy 0.0.1-beta",
+//!   "created": "2025-07-23T19:11:12.817986724+01:00",
+//!   "software": "wacksy 0.0.1",
 //!   "resources": [
 //!     {
 //!       "name": "data.warc",
 //!       "path": "archive/data.warc",
-//!       "hash": "sha256:210d0810aaf4a4aba556f97bc7fc497d176a8c171d8edab3390e213a41bed145",
+//!       "hash": "blake3:b33e5bd9e2cf814a74ffa51256591f58fb0d95e5068d2121cf2775179d0ffd90",
 //!       "bytes": 4599
 //!     },
 //!     {
 //!       "name": "index.cdxj",
 //!       "path": "indexes/index.cdxj",
-//!       "hash": "sha256:0494f16f39fbb3744556e1d64be1088109ac35c730f4a30ac3a3b10942340ca3",
+//!       "hash": "blake3:d388a3aee3afd383d50bd1167f6f33b60017bc37361c93733dc25fcc83aeac6e",
 //!       "bytes": 543
 //!     }
 //!   ]
@@ -27,10 +27,10 @@
 //!
 //! [Link to spec](https://specs.webrecorder.net/wacz/1.1.1/#datapackage-json)
 
+use blake3::hash;
 use chrono::Local;
 use serde::{Deserialize, Serialize};
 use serde_json;
-use sha2::{Digest, Sha256};
 use std::{error::Error, path::Path};
 
 use crate::WACZ_VERSION;
@@ -126,8 +126,9 @@ impl DataPackage {
     /// deserialising the data package to a vector.
     pub fn digest(data_package: &Self) -> Result<DataPackageDigest, serde_json::Error> {
         let data_package_file = serde_json::to_vec(&data_package)?;
-        let file_hash = Sha256::digest(data_package_file);
-        let file_hash_formatted = format!("sha256:{file_hash:x}");
+        let file_hash = hash(&data_package_file).to_hex();
+        let file_hash_formatted = format!("blake3:{file_hash}");
+
         return Ok(DataPackageDigest {
             path: "datapackage.json".to_owned(),
             hash: file_hash_formatted,
@@ -171,11 +172,9 @@ impl DataPackageResource {
             }
         };
 
-        // create a sha256 hash, from documentation
-        // here https://docs.rs/sha2/latest/sha2/
-        // create a Sha256 object
-        let file_hash = Sha256::digest(file_bytes);
-        let file_hash_formatted = format!("sha256:{file_hash:x}");
+        // create file hash for the resource
+        let file_hash = hash(file_bytes).to_hex();
+        let file_hash_formatted = format!("blake3:{file_hash}");
 
         return Ok(Self {
             name: file_name,
