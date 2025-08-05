@@ -2,7 +2,7 @@
 
 [![SWH](https://archive.softwareheritage.org/badge/swh:1:snp:4946a5fe3e15fa0c3e9e68cd5b3816cf80f733d6/)](https://archive.softwareheritage.org/swh:1:snp:4946a5fe3e15fa0c3e9e68cd5b3816cf80f733d6;origin=https://github.com/extua/wacksy)
 
-An experimental Rust library for reading and writing WACZ files.
+An experimental Rust library for ~~reading and~~ writing WACZ files.
 
 ## Install
 
