@@ -134,8 +134,13 @@ pub struct PageRecord {
 impl PageRecord {
     /// # Create page record
     ///
-    /// Takes a `Record<BufferedBody>` and extracts the
-    /// timestamp and url for the pages.jsonl file.
+    /// Takes a `Record<BufferedBody>` and extracts the timestamp
+    /// and url for the pages.jsonl file. This will only produce page
+    /// records for resources with a media type of either:
+    ///
+    /// * `text/html`
+    /// * `application/xhtml+xml`
+    /// * `text/plain`
     ///
     /// # Errors
     ///
@@ -145,15 +150,20 @@ impl PageRecord {
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
         let timestamp = RecordTimestamp::new(record)?;
         let url = RecordUrl::new(record)?;
+        let mime = RecordContentType::new(record)?;
 
-        // first check whether the record is either
-        // a response, revisit, resource, or metadata
+        // first check whether the record is either a
+        // response, revisit, resource, or metadata
+        // and check whether the record mime type
+        // refers to a web page
         if [
             RecordType::Response,
             RecordType::Revisit,
             RecordType::Resource,
         ]
         .contains(record.warc_type())
+            && ["text/html", "application/xhtml+xml", "text/plain"]
+                .contains(&mime.to_string().as_str())
         {
             let parsed_record = Self {
                 timestamp,
