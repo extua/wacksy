@@ -19,12 +19,12 @@ authors:
     affiliation: Oxford University
     orcid: 'https://orcid.org/0000-0001-9245-7670'
 repository-code: 'https://github.com/extua/wacksy'
-abstract: 'An experimental library for reading and writing WACZ files.'
+abstract: 'An experimental library for writing WACZ files.'
 keywords:
   - wacz
   - warc
   - cdxj
   - archive
 license: MIT
-version: '0.0.1'
-date-released: '2025-06-20'
+version: '0.0.2'
+date-released: '2025-08-06'
