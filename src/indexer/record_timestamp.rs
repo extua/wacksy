@@ -36,7 +36,7 @@ impl RecordTimestamp {
     }
 }
 impl fmt::Display for RecordTimestamp {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        return write!(f, "{}", self.0.format("%Y%m%d%H%M%S"));
+    fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
+        return write!(message, "{}", self.0.format("%Y%m%d%H%M%S"));
     }
 }

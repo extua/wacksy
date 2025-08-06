@@ -19,29 +19,38 @@ pub enum IndexingError {
     UnindexableRecordType(warc::RecordType),
 }
 impl Display for IndexingError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+    fn fmt(&self, message: &mut Formatter<'_>) -> Result {
         match self {
             Self::RecordTimestampError(parse_error_message) => {
-                return write!(f, "Could not read timestamp from record: {parse_error_message}");
+                return write!(
+                    message,
+                    "Could not read timestamp from record: {parse_error_message}"
+                );
             }
             Self::WarcFilenameError(error_message) => {
-                return write!(f, "Could not get WARC filename: {error_message}");
+                return write!(message, "Could not get WARC filename: {error_message}");
             }
             Self::RecordContentTypeError(error_message) => {
-                return write!(f, "Could not parse record content type: {error_message}");
+                return write!(
+                    message,
+                    "Could not parse record content type: {error_message}"
+                );
             }
             Self::RecordUrlError(parse_error_message) => {
-                return write!(f, "Could not parse target url: {parse_error_message}");
+                return write!(message, "Could not parse target url: {parse_error_message}");
             }
             Self::RecordStatusError(parse_int_error_message) => {
-                return write!(f, "Could not parse HTTP status: {parse_int_error_message}");
+                return write!(
+                    message,
+                    "Could not parse HTTP status: {parse_int_error_message}"
+                );
             }
             Self::ValueNotFound(error_message) => {
-                return write!(f, "Value not found: {error_message}");
+                return write!(message, "Value not found: {error_message}");
             }
             Self::UnindexableRecordType(warc_type) => {
                 return write!(
-                    f,
+                    message,
                     "Could not index this type of record: {}",
                     warc_type.to_string()
                 );

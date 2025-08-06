@@ -30,8 +30,8 @@
 use chrono::Local;
 use serde::{Deserialize, Serialize};
 use serde_json;
-use sha2::{Digest, Sha256};
-use std::{error::Error, path::Path};
+use sha2::{Digest as _, Sha256};
+use std::{error::Error, fmt, path::Path};
 
 use crate::WACZ_VERSION;
 
@@ -191,14 +191,14 @@ pub enum DataPackageError {
     FileNameError(String),
     FilePathError(String),
 }
-impl std::fmt::Display for DataPackageError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for DataPackageError {
+    fn fmt(&self, message: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::FileNameError(error_message) => {
-                return write!(f, "Filename error: {error_message}");
+                return write!(message, "Filename error: {error_message}");
             }
             Self::FilePathError(error_message) => {
-                return write!(f, "File path error: {error_message}");
+                return write!(message, "File path error: {error_message}");
             }
         }
     }

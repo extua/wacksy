@@ -51,8 +51,8 @@ impl RecordUrl {
     }
 }
 impl fmt::Display for RecordUrl {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
         let url_string: String = self.0.clone().into();
-        return write!(f, "{}", url_string.to_lowercase());
+        return write!(message, "{}", url_string.to_lowercase());
     }
 }

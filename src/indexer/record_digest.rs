@@ -27,7 +27,7 @@ impl RecordDigest {
     }
 }
 impl fmt::Display for RecordDigest {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        return write!(f, "{}", self.0);
+    fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
+        return write!(message, "{}", self.0);
     }
 }

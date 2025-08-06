@@ -42,7 +42,7 @@ impl WarcFilename {
     }
 }
 impl fmt::Display for WarcFilename {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        return write!(f, "{}", self.0);
+    fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
+        return write!(message, "{}", self.0);
     }
 }

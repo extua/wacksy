@@ -70,8 +70,8 @@ impl PageRecord {
 }
 /// Display the record to json.
 impl fmt::Display for PageRecord {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
         let pages_json_string = serde_json::to_string(self).unwrap();
-        return writeln!(f, "{pages_json_string}");
+        return writeln!(message, "{pages_json_string}");
     }
 }

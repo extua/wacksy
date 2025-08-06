@@ -79,7 +79,7 @@ pub fn index_file(warc_file_path: &Path) -> Result<Index, std::io::Error> {
                     // Get the length of the record body in content_length,
                     // added to the length of the unwrapped record header
                     let record_length: u64 = record.content_length()
-                        + record.into_raw_parts().0.to_string().len() as u64;
+                        + u64::try_from(record.into_raw_parts().0.to_string().len()).unwrap();
 
                     // increment the byte counter after processing the record
                     byte_counter = byte_counter.wrapping_add(record_length);
@@ -117,17 +117,17 @@ pub struct Index(pub CDXJIndex, pub PageIndex);
 /// This index struct contains a list of individual [CDX(J) Records](CDXJIndexRecord).
 pub struct CDXJIndex(Vec<CDXJIndexRecord>);
 impl fmt::Display for CDXJIndex {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
         let index_string: String = self.0.iter().map(ToString::to_string).collect();
-        return write!(f, "{index_string}");
+        return write!(message, "{index_string}");
     }
 }
 
 pub struct PageIndex(Vec<PageRecord>);
 impl fmt::Display for PageIndex {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
         let index_string: String = self.0.iter().map(ToString::to_string).collect();
-        return write!(f, "{index_string}");
+        return write!(message, "{index_string}");
     }
 }
 
@@ -215,9 +215,9 @@ impl CDXJIndexRecord {
 ///
 /// Could there be a better way to serialize this?
 impl fmt::Display for CDXJIndexRecord {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
         return writeln!(
-            f,
+            message,
             "{} {} {{\"url\":\"{}\",\"digest\":\"{}\",\"mime\":\"{}\",\"offset\":{},\"length\":{},\"status\":{},\"filename\":\"{}\"}}",
             self.searchable_url,
             self.timestamp,
@@ -250,7 +250,7 @@ impl PageTitle {
     // }
 }
 impl fmt::Display for PageTitle {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        return write!(f, "{}", self.0);
+    fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
+        return write!(message, "{}", self.0);
     }
 }
