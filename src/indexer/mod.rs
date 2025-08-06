@@ -146,11 +146,12 @@ impl PageRecord {
     ///
     /// Returns an `UnindexableRecordType` error if the record is not
     /// a Warc `response`, `revisit`, or `resource`. Otherwise, returns
-    /// corresponding errors for url and timestamp fields.
+    /// corresponding errors for url, timestamp mime, or status fields.
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
         let timestamp = RecordTimestamp::new(record)?;
         let url = RecordUrl::new(record)?;
         let mime = RecordContentType::new(record)?;
+        let status = RecordStatus::new(record)?;
 
         // first check whether the record is either a
         // response, revisit, resource, or metadata
@@ -164,6 +165,7 @@ impl PageRecord {
         .contains(record.warc_type())
             && ["text/html", "application/xhtml+xml", "text/plain"]
                 .contains(&mime.to_string().as_str())
+            && status == RecordStatus(200)
         {
             let parsed_record = Self {
                 timestamp,
