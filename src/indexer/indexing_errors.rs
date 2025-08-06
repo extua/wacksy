@@ -3,19 +3,26 @@ use std::fmt::{Display, Formatter, Result};
 
 #[derive(Debug)]
 pub enum IndexingError {
+    /// could not read timestamp from record
     RecordTimestampError(chrono::ParseError),
+    /// could not get WARC filename
     WarcFilenameError(String),
+    /// could not parse record content type
     RecordContentTypeError(String),
+    /// could nor parse the target url
     RecordUrlError(url::ParseError),
+    /// could not parse HTTP status code
     RecordStatusError(String),
+    /// some value was missing
     ValueNotFound(String),
+    /// this type of record can not be indexed
     UnindexableRecordType(warc::RecordType),
 }
 impl Display for IndexingError {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             Self::RecordTimestampError(parse_error_message) => {
-                return write!(f, "Could not get record timestamp: {parse_error_message}");
+                return write!(f, "Could not read timestamp from record: {parse_error_message}");
             }
             Self::WarcFilenameError(error_message) => {
                 return write!(f, "Could not get WARC filename: {error_message}");
@@ -24,7 +31,7 @@ impl Display for IndexingError {
                 return write!(f, "Could not parse record content type: {error_message}");
             }
             Self::RecordUrlError(parse_error_message) => {
-                return write!(f, "Could not parse url: {parse_error_message}");
+                return write!(f, "Could not parse target url: {parse_error_message}");
             }
             Self::RecordStatusError(parse_int_error_message) => {
                 return write!(f, "Could not parse HTTP status: {parse_int_error_message}");

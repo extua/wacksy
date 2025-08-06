@@ -10,21 +10,21 @@ use std::path::Path;
 use warc::{BufferedBody, Record, RecordIter, RecordType, WarcReader};
 
 mod indexing_errors;
-use indexing_errors::IndexingError;
+pub use indexing_errors::IndexingError;
 mod page_record;
-use page_record::PageRecord;
+pub use page_record::PageRecord;
 mod record_timestamp;
-use record_timestamp::RecordTimestamp;
+pub use record_timestamp::RecordTimestamp;
 mod warc_filename;
-use warc_filename::WarcFilename;
+pub use warc_filename::WarcFilename;
 mod record_digest;
-use record_digest::RecordDigest;
+pub use record_digest::RecordDigest;
 mod record_content_type;
-use record_content_type::RecordContentType;
+pub use record_content_type::RecordContentType;
 mod record_url;
-use record_url::RecordUrl;
+pub use record_url::RecordUrl;
 mod record_status;
-use record_status::RecordStatus;
+pub use record_status::RecordStatus;
 
 /// # Indexer
 ///
