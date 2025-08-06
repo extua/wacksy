@@ -70,3 +70,20 @@ impl fmt::Display for RecordContentType {
         return write!(message, "{}", self.0);
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn valid_content_type() {
+        let headers = Record::<BufferedBody>::new();
+        let record = headers.add_body("HTTP/1.1 200\ncontent-type: text/html\n");
+
+        let generated_content_type = RecordContentType::new(&record).unwrap().to_string();
+        let example_content_type = "text/html";
+
+        assert_eq!(generated_content_type, example_content_type);
+    }
+}

@@ -40,3 +40,21 @@ impl fmt::Display for RecordTimestamp {
         return write!(message, "{}", self.0.format("%Y%m%d%H%M%S"));
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn valid_timestamp() {
+        let timestamp = "2025-08-06T14:37:28+01:00";
+        let mut headers = Record::<BufferedBody>::new();
+        headers.set_header(WarcHeader::Date, timestamp).unwrap();
+        let record = headers.add_body("");
+
+        let generated_timestamp = RecordTimestamp::new(&record).unwrap().to_string();
+
+        assert_eq!(generated_timestamp, "20250806133728");
+    }
+}

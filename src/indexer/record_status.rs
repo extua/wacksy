@@ -42,3 +42,22 @@ impl fmt::Display for RecordStatus {
         return write!(message, "{}", self.0);
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn valid_status() {
+        let status = "200";
+        let body = format!("HTTP/1.1 {status}\n");
+        let record = Record::<BufferedBody>::new().add_body(body);
+
+        let generated_status = RecordStatus::new(&record).unwrap().to_string();
+
+        assert_eq!(generated_status, status);
+    }
+
+    // todo: check invalid status too
+}

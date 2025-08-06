@@ -31,3 +31,23 @@ impl fmt::Display for RecordDigest {
         return write!(message, "{}", self.0);
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn valid_digest() {
+        let digest = "sha256:ea8fac7c65fb589b0d53560f5251f74f9e9b243478dcb6b3ea79b5e36449c8d9";
+        let mut headers = Record::<BufferedBody>::new();
+        headers
+            .set_header(WarcHeader::PayloadDigest, digest)
+            .unwrap();
+        let record = headers.add_body("");
+
+        let generated_digest = RecordDigest::new(&record).unwrap().to_string();
+
+        assert_eq!(generated_digest, digest);
+    }
+}

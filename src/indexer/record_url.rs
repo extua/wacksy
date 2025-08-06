@@ -56,3 +56,42 @@ impl fmt::Display for RecordUrl {
         return write!(message, "{}", url_string.to_lowercase());
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn valid_url() {
+        let target_url = "https://thehtml.review/04/ascii-bedroom-archive/";
+
+        let mut headers = Record::<BufferedBody>::new();
+        headers
+            .set_header(WarcHeader::TargetURI, target_url)
+            .unwrap();
+        let record = headers.add_body("");
+
+        let parsed_url = RecordUrl::new(&record).unwrap().to_string();
+
+        assert_eq!(parsed_url, target_url);
+    }
+
+    #[test]
+    fn valid_surt() {
+        let target_url = "https://thehtml.review/04/ascii-bedroom-archive/";
+
+        let mut headers = Record::<BufferedBody>::new();
+        headers
+            .set_header(WarcHeader::TargetURI, target_url)
+            .unwrap();
+        let record = headers.add_body("");
+
+        let surt_parsed_url = RecordUrl::new(&record)
+            .unwrap()
+            .as_searchable_string()
+            .unwrap();
+
+        assert_eq!(surt_parsed_url, "review,thehtml)/04/ascii-bedroom-archive");
+    }
+}

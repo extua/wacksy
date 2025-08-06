@@ -46,3 +46,24 @@ impl fmt::Display for WarcFilename {
         return write!(message, "{}", self.0);
     }
 }
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn valid_filename() {
+        let filename = "example.warc";
+        let path = Path::new(filename);
+
+        let mut headers = Record::<BufferedBody>::new();
+        headers.set_header(WarcHeader::Filename, filename).unwrap();
+        let record = headers.add_body("");
+
+        let parsed_filename = WarcFilename::new(&record, path).unwrap().to_string();
+
+        assert_eq!(parsed_filename, filename);
+    }
+
+    // todo test case, what if the filename and warc are both present and they don't match?
+}

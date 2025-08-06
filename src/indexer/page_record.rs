@@ -75,3 +75,32 @@ impl fmt::Display for PageRecord {
         return writeln!(message, "{pages_json_string}");
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use warc::WarcHeader;
+
+    use super::*;
+
+    #[test]
+    fn valid_page_record() {
+        let timestamp = "2025-08-06T14:37:28+01:00";
+        let target_url = "https://thehtml.review/04/ascii-bedroom-archive/";
+
+        let mut headers = Record::<BufferedBody>::new();
+        headers.set_warc_type(RecordType::Resource);
+        headers.set_header(WarcHeader::Date, timestamp).unwrap();
+        headers
+            .set_header(WarcHeader::TargetURI, target_url)
+            .unwrap();
+        let record = headers.add_body("HTTP/1.1 200\ncontent-type: text/html\n");
+
+        let generated_page_record = PageRecord::new(&record).unwrap().to_string();
+        let example_page_record =
+            format!("{{\"timestamp\":\"2025-08-06T13:37:28Z\",\"url\":\"{target_url}\"}}\n");
+
+        assert_eq!(generated_page_record, example_page_record);
+    }
+
+    // todo: test the different conditions, eg. a resource with a different content type
+}
