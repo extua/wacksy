@@ -1,5 +1,5 @@
 use std::{fs, path::Path};
-use wacksy::*;
+use wacksy::indexer;
 
 const WARC_PATH: &str = "tests/rec-e7e68da067d0-20250423121042981-0.warc.gz";
 
