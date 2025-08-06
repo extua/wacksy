@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.2](https://github.com/extua/wacksy/compare/v0.0.1...v0.0.2) - 2025-08-06
+
+This release involves some refactoring, different parts of the indexer are now in their own modules.
+As a result of this, it was easier to write unit tests for each resource, so I've now done that, along with two integration tests.
+The tests just cover the basics, I expect to expand these in future to check errors and other things.
+
+The page record indexer now only indexes records according to a set of conditions which _guarantee_ the record is a web document.
+Unfortunately the WACZ spec does not define what a page is in terms we can use here, so I have come up with the following conditions:
+
+- The WARC record type is either Response, Revisit, or Resource
+- The HTTP content-type is either `text/html`, `application/xhtml+xml`, or `text/plain`.
+- The HTTP status code is 200 OK.
+
+This is an imperfect best-guess attempt to pick out things which _might_ be pages from a WARC file.
+The reason I filter for successful status codes is I realised that some failed requests return HTML pages in the response along with a 404 error.
+Those are definitely _pages_, but I guess they're not what people want out of the `pages.jsonl` index.
+
+I made a brief attempt to replace sha256 with the faster [blake3](https://github.com/BLAKE3-team/BLAKE3) hashing algorithm, but this breaks compatibility with `py-wacz`.
+I think this is something which will have to wait until blake3 can be integrated into the python standard library [as part of hashlib](https://github.com/python/cpython/issues/83479).
+
+### Dependencies
+
+- This library now depends on [surt-rs](https://github.com/mijho/surt-rs) to create searchable url strings. It's a fairly minimal library and is more comprehensive than my own attempt to write a surt-ing function.
+- Bump [rawzip](https://github.com/nickbabcock/rawzip) to 0.3 ([#41](https://github.com/extua/wacksy/pull/41)), thanks [@nickbabcock](https://github.com/nickbabcock)!
+
 ## [0.0.1](https://github.com/extua/wacksy/compare/v0.0.1-beta...v0.0.1) - 2025-06-20
 
 As of this point, the WACZ and indexer can output (almost) everything needed from a WARC file to a fully spec-compliant WACZ file.
