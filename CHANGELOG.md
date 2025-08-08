@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3](https://github.com/bodleian/wacksy/compare/v0.0.2...v0.0.3) - 2025-08-08
+
+### Other
+
+- update/add badges to readme
+- change repository link to https://github.com/bodleian/wacksy/
+
 ## [0.0.2](https://github.com/bodleian/wacksy/compare/v0.0.1...v0.0.2) - 2025-08-06
 
 This release involves some refactoring, different parts of the indexer are now in their own modules.
