@@ -1,6 +1,8 @@
 # Wacksy
 
-[![SWH](https://archive.softwareheritage.org/badge/swh:1:snp:4946a5fe3e15fa0c3e9e68cd5b3816cf80f733d6/)](https://archive.softwareheritage.org/swh:1:snp:4946a5fe3e15fa0c3e9e68cd5b3816cf80f733d6;origin=https://github.com/extua/wacksy)
+[![Software Heritage Archive](https://archive.softwareheritage.org/badge/origin/https://github.com/bodleian/wacksy/)](https://archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/bodleian/wacksy)
+![Deps.rs Crate Dependencies (latest)](https://img.shields.io/deps-rs/wacksy/latest)
+![Crates.io Total Downloads](https://img.shields.io/crates/d/wacksy)
 
 An experimental Rust library for ~~reading and~~ writing WACZ files.
 
