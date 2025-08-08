@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.0.2](https://github.com/extua/wacksy/compare/v0.0.1...v0.0.2) - 2025-08-06
+## [0.0.2](https://github.com/bodleian/wacksy/compare/v0.0.1...v0.0.2) - 2025-08-06
 
 This release involves some refactoring, different parts of the indexer are now in their own modules.
 As a result of this, it was easier to write unit tests for each resource, so I've now done that, along with two integration tests.
@@ -30,9 +30,9 @@ I think this is something which will have to wait until blake3 can be integrated
 ### Dependencies
 
 - This library now depends on [surt-rs](https://github.com/mijho/surt-rs) to create searchable url strings. It's a fairly minimal library and is more comprehensive than my own attempt to write a surt-ing function.
-- Bump [rawzip](https://github.com/nickbabcock/rawzip) to 0.3 ([#41](https://github.com/extua/wacksy/pull/41)), thanks [@nickbabcock](https://github.com/nickbabcock)!
+- Bump [rawzip](https://github.com/nickbabcock/rawzip) to 0.3 ([#41](https://github.com/bodleian/wacksy/pull/41)), thanks [@nickbabcock](https://github.com/nickbabcock)!
 
-## [0.0.1](https://github.com/extua/wacksy/compare/v0.0.1-beta...v0.0.1) - 2025-06-20
+## [0.0.1](https://github.com/bodleian/wacksy/compare/v0.0.1-beta...v0.0.1) - 2025-06-20
 
 As of this point, the WACZ and indexer can output (almost) everything needed from a WARC file to a fully spec-compliant WACZ file.
 The last thing missing was the pages.jsonl file, which is now produced when reading through the WARC file as part of the indexer.
@@ -62,7 +62,7 @@ Lots more little documentation/readme changes and additions. Code refactoring, e
 - *(datapackage)* DataPackageResource::new now returns a result/error rather than panicking
 - *(indexer)* use httparse to parse http status code from response and remove the happily redundant cut_http_headers_from_record function
 
-## [0.0.1-beta](https://github.com/extua/wacksy/compare/v0.0.1-alpha...v0.0.1-beta) - 2025-05-16
+## [0.0.1-beta](https://github.com/bodleian/wacksy/compare/v0.0.1-alpha...v0.0.1-beta) - 2025-05-16
 
 Work on this version was mostly refactoring, adding structured types and error handling, and some documentation (only just started).
 
@@ -81,7 +81,7 @@ Still on my todo list is to use the indexer to also create pages.jsonl files.
 - *(datapackage)* propogate errors upwards, there are still some panics, but structured error handling is a lot more comprehensive now. Happy and unhappy paths are a little clearer to identify.
 - update README with link to a funny meme :)
 
-## [0.0.1-alpha](https://github.com/extua/wacksy/releases/tag/v0.0.1-alpha) - 2025-04-05
+## [0.0.1-alpha](https://github.com/bodleian/wacksy/releases/tag/v0.0.1-alpha) - 2025-04-05
 
 At this stage the library can read a WARC file to produce a CDXJ index, and a datapackage.
 
