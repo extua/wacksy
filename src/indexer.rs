@@ -55,25 +55,28 @@ pub fn index_file(warc_file_path: &Path) -> Result<Index, std::io::Error> {
                 Ok(record) => {
                     match CDXJIndexRecord::new(&record, byte_counter, warc_file_path) {
                         Ok(processed_record) => {
+                            // if the record was successfully indexed,
+                            // add it to the index
                             cdxj_index.push(processed_record);
+                            // now try creating a page record
+                            match PageRecord::new(&record) {
+                                Ok(processed_record) => {
+                                    page_index.push(processed_record);
+                                }
+                                Err(err) => eprintln!(
+                                    "Could not create page record for warc record {record_count} with id {}: {err}",
+                                    record.warc_id()
+                                ),
+                            }
                         }
-                        Err(err) => eprintln!(
-                            // Any error with the record means we have to
-                            // skip over it and move on to the next one.
-                            "Skipping record number {record_count} with id {}: {err}",
-                            record.warc_id()
-                        ),
-                    }
-                    match PageRecord::new(&record) {
-                        Ok(processed_record) => {
-                            page_index.push(processed_record);
+                        Err(err) => {
+                            eprintln!(
+                                // Any error with the record means we have to
+                                // skip over it and move on to the next one.
+                                "Could not create cdxj record for warc record {record_count} with id {}: {err}",
+                                record.warc_id()
+                            );
                         }
-                        Err(err) => eprintln!(
-                            // Any error with the record means we have to
-                            // skip over it and move on to the next one.
-                            "Skipping record number {record_count} with id {}: {err}",
-                            record.warc_id()
-                        ),
                     }
 
                     // Get the length of the record body in content_length,
@@ -94,7 +97,7 @@ pub fn index_file(warc_file_path: &Path) -> Result<Index, std::io::Error> {
                 }
             }
         }
-        println!("Indexed {record_count} records");
+        println!("Read {record_count} records");
 
         return Index(CDXJIndex(cdxj_index), PageIndex(page_index));
     }
