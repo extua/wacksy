@@ -1,13 +1,14 @@
 use std::error::Error;
 use std::{fs, path::Path};
-use wacksy::{Wacz, datapackage::DataPackage, indexer::index_file};
+use wacksy::{Wacz, datapackage::DataPackage, indexer::Index};
 
 fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let warc_file_path: &Path = Path::new("examples/rec-e7e68da067d0-20250423121042981-0.warc.gz");
 
     let warc_file = fs::read(warc_file_path)?;
 
-    let index = index_file(warc_file_path)?;
+    let index = Index::index_file(warc_file_path)?;
+    println!("Read {} records", index.2);
 
     let cdxj_index_bytes = index.0.to_string().into_bytes();
     let pages_index_bytes = index.1.to_string().into_bytes();

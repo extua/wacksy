@@ -26,96 +26,107 @@ pub use record_url::RecordUrl;
 mod record_status;
 pub use record_status::RecordStatus;
 
-/// # Indexer
-///
-/// This function sets off looping through the
-/// records to build the index and create the
-/// pages.jsonl file.
-///
-/// # Errors
-///
-/// Will return a `std::io::Error` from
-/// `WarcReader::from_path`/`from_path_gzip`
-/// in case of any problem reading the Warc file.
-pub fn index_file(warc_file_path: &Path) -> Result<Index, std::io::Error> {
-    // this looping function accepts a generic type which
-    // this allows us to pass in both gzipped and non-gzipped records
-    fn loop_over_records<T: Iterator<Item = Result<Record<BufferedBody>, warc::Error>>>(
-        file_records: T,
-        warc_file_path: &Path,
-    ) -> Index {
-        let mut record_count: usize = 0;
-        let mut byte_counter: u64 = 0;
-        let mut cdxj_index: Vec<CDXJIndexRecord> = Vec::with_capacity(1024);
-        let mut page_index: Vec<PageRecord> = Vec::with_capacity(1024);
+pub struct Index(pub CDXJIndex, pub PageIndex, pub NumberOfRecordsRead);
 
-        for record in file_records.enumerate() {
-            record_count = record.0 + 1; // enumerate is zero-indexed, so add 1 here to compensate
-            match record.1 {
-                Ok(record) => {
-                    match CDXJIndexRecord::new(&record, byte_counter, warc_file_path) {
-                        Ok(processed_record) => {
-                            // if the record was successfully indexed,
-                            // add it to the index
-                            cdxj_index.push(processed_record);
-                            // now try creating a page record
-                            match PageRecord::new(&record) {
-                                Ok(processed_record) => {
-                                    page_index.push(processed_record);
+impl Index {
+    /// # Indexer
+    ///
+    /// This function sets off looping through the
+    /// records to build the index and create the
+    /// pages.jsonl file.
+    ///
+    /// # Errors
+    ///
+    /// Will return a `std::io::Error` from
+    /// `WarcReader::from_path`/`from_path_gzip`
+    /// in case of any problem reading the Warc file.
+    pub fn index_file(warc_file_path: &Path) -> Result<Self, std::io::Error> {
+        // this looping function accepts a generic type which
+        // this allows us to pass in both gzipped and non-gzipped records
+        fn loop_over_records<T: Iterator<Item = Result<Record<BufferedBody>, warc::Error>>>(
+            file_records: T,
+            warc_file_path: &Path,
+        ) -> Index {
+            let mut record_count: usize = 0;
+            let mut byte_counter: u64 = 0;
+            let mut cdxj_index: Vec<CDXJIndexRecord> = Vec::with_capacity(1024);
+            let mut page_index: Vec<PageRecord> = Vec::with_capacity(1024);
+
+            for record in file_records.enumerate() {
+                record_count = record.0 + 1; // enumerate is zero-indexed, so add 1 here to compensate
+                match record.1 {
+                    Ok(record) => {
+                        match CDXJIndexRecord::new(&record, byte_counter, warc_file_path) {
+                            Ok(processed_record) => {
+                                // if the record was successfully indexed,
+                                // add it to the index
+                                cdxj_index.push(processed_record);
+                                // now try creating a page record
+                                match PageRecord::new(&record) {
+                                    Ok(processed_record) => {
+                                        page_index.push(processed_record);
+                                    }
+                                    Err(err) => eprintln!(
+                                        "Could not create page record for warc record {record_count} with id {}: {err}",
+                                        record.warc_id()
+                                    ),
                                 }
-                                Err(err) => eprintln!(
-                                    "Could not create page record for warc record {record_count} with id {}: {err}",
+                            }
+                            Err(err) => {
+                                eprintln!(
+                                    // Any error with the record means we have to
+                                    // skip over it and move on to the next one.
+                                    "Could not create cdxj record for warc record {record_count} with id {}: {err}",
                                     record.warc_id()
-                                ),
+                                );
                             }
                         }
-                        Err(err) => {
-                            eprintln!(
-                                // Any error with the record means we have to
-                                // skip over it and move on to the next one.
-                                "Could not create cdxj record for warc record {record_count} with id {}: {err}",
-                                record.warc_id()
-                            );
-                        }
+
+                        // Get the length of the record body in content_length,
+                        // added to the length of the unwrapped record header
+                        let record_length: u64 = record.content_length()
+                            + u64::try_from(record.into_raw_parts().0.to_string().len()).unwrap();
+
+                        // increment the byte counter after processing the record
+                        byte_counter = byte_counter.wrapping_add(record_length);
                     }
-
-                    // Get the length of the record body in content_length,
-                    // added to the length of the unwrapped record header
-                    let record_length: u64 = record.content_length()
-                        + u64::try_from(record.into_raw_parts().0.to_string().len()).unwrap();
-
-                    // increment the byte counter after processing the record
-                    byte_counter = byte_counter.wrapping_add(record_length);
-                }
-                Err(err) => {
-                    // Any error with the record here affects the offset counter,
-                    // so can't index the rest of the file.
-                    eprintln!(
-                        "Unable to index the remainder of the file. WARC header parsing error: {err}"
-                    );
-                    break;
+                    Err(err) => {
+                        // Any error with the record here affects the offset counter,
+                        // so can't index the rest of the file.
+                        eprintln!(
+                            "Unable to index the remainder of the file. WARC header parsing error: {err}"
+                        );
+                        break;
+                    }
                 }
             }
+
+            return Index(
+                CDXJIndex(cdxj_index),
+                PageIndex(page_index),
+                NumberOfRecordsRead(record_count),
+            );
         }
-        println!("Read {record_count} records");
 
-        return Index(CDXJIndex(cdxj_index), PageIndex(page_index));
+        if warc_file_path.extension() == Some(OsStr::new("gz")) {
+            let file_gzip: WarcReader<BufReader<MultiDecoder<BufReader<File>>>> =
+                WarcReader::from_path_gzip(warc_file_path)?;
+            let file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>> =
+                file_gzip.iter_records();
+            return Ok(loop_over_records(file_records, warc_file_path));
+        } else {
+            let file_not_gzip: WarcReader<BufReader<File>> = WarcReader::from_path(warc_file_path)?;
+            let file_records: RecordIter<BufReader<File>> = file_not_gzip.iter_records();
+            return Ok(loop_over_records(file_records, warc_file_path));
+        };
     }
-
-    if warc_file_path.extension() == Some(OsStr::new("gz")) {
-        let file_gzip: WarcReader<BufReader<MultiDecoder<BufReader<File>>>> =
-            WarcReader::from_path_gzip(warc_file_path)?;
-        let file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>> =
-            file_gzip.iter_records();
-        return Ok(loop_over_records(file_records, warc_file_path));
-    } else {
-        let file_not_gzip: WarcReader<BufReader<File>> = WarcReader::from_path(warc_file_path)?;
-        let file_records: RecordIter<BufReader<File>> = file_not_gzip.iter_records();
-        return Ok(loop_over_records(file_records, warc_file_path));
-    };
 }
-
-pub struct Index(pub CDXJIndex, pub PageIndex);
+pub struct NumberOfRecordsRead(usize);
+impl fmt::Display for NumberOfRecordsRead {
+    fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
+        return write!(message, "{}", self.0);
+    }
+}
 
 /// This index struct contains a list of individual [CDX(J) Records](CDXJIndexRecord).
 pub struct CDXJIndex(Vec<CDXJIndexRecord>);
