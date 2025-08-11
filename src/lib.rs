@@ -68,7 +68,9 @@ impl Wacz {
         let compression_method = CompressionMethod::Store;
 
         // this should be an iterator?
-        // iterate over everything in the struct and add it recursively
+        // iterate over everything listed in the datapackage!
+        // and add it recursively
+        // and *then*, add the datapackage digest at the end
         Self::add_file_to_archive(
             &mut archive,
             compression_method,

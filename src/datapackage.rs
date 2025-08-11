@@ -33,7 +33,7 @@ use serde_json;
 use sha2::{Digest as _, Sha256};
 use std::{error::Error, fmt, path::Path};
 
-use crate::WACZ_VERSION;
+use crate::{WACZ_VERSION, indexer::Index};
 
 /// A [frictionless datapackage](https://specs.frictionlessdata.io/data-package/).
 #[derive(Serialize, Deserialize)]
@@ -85,8 +85,7 @@ impl DataPackage {
     /// or path of a resource.
     pub fn new(
         warc_file: &[u8],
-        cdxj_index_file: &[u8],
-        pages_index_file: &[u8],
+        index: &Index,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'static>> {
         let mut data_package = Self::default();
 
@@ -96,14 +95,14 @@ impl DataPackage {
         let resource = DataPackageResource::new(path, warc_file)?;
         Self::add_resource(&mut data_package, resource);
 
-        // add index file to datapackage
+        // add cdxj file to datapackage
         let path: &Path = Path::new("indexes/index.cdxj");
-        let resource = DataPackageResource::new(path, cdxj_index_file)?;
+        let resource = DataPackageResource::new(path, &index.0.to_string().into_bytes())?;
         Self::add_resource(&mut data_package, resource);
 
-        // add index file to datapackage
+        // add pages file to datapackage
         let path: &Path = Path::new("pages/pages.jsonl");
-        let resource = DataPackageResource::new(path, pages_index_file)?;
+        let resource = DataPackageResource::new(path, &index.1.to_string().into_bytes())?;
         Self::add_resource(&mut data_package, resource);
 
         return Ok(data_package);
@@ -125,12 +124,10 @@ impl DataPackage {
     /// Will return a `serde_json` error if there's any problem
     /// deserialising the data package to a vector.
     pub fn digest(data_package: &Self) -> Result<DataPackageDigest, serde_json::Error> {
-        let data_package_file = serde_json::to_vec(&data_package)?;
-        let file_hash = Sha256::digest(data_package_file);
-        let file_hash_formatted = format!("sha256:{file_hash:x}");
+        let data_package_file: Vec<u8> = serde_json::to_vec(&data_package)?;
         return Ok(DataPackageDigest {
             path: "datapackage.json".to_owned(),
-            hash: file_hash_formatted,
+            hash: format!("sha256:{:x}", Sha256::digest(data_package_file)),
         });
     }
 }
@@ -171,16 +168,10 @@ impl DataPackageResource {
             }
         };
 
-        // create a sha256 hash, from documentation
-        // here https://docs.rs/sha2/latest/sha2/
-        // create a Sha256 object
-        let file_hash = Sha256::digest(file_bytes);
-        let file_hash_formatted = format!("sha256:{file_hash:x}");
-
         return Ok(Self {
             name: file_name,
             path,
-            hash: file_hash_formatted,
+            hash: format!("sha256:{:x}", Sha256::digest(file_bytes)),
             bytes: file_bytes.len(),
         });
     }
