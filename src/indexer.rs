@@ -50,7 +50,7 @@ pub fn index_file(warc_file_path: &Path) -> Result<Index, std::io::Error> {
         let mut page_index: Vec<PageRecord> = Vec::with_capacity(1024);
 
         for record in file_records.enumerate() {
-            record_count = record.0;
+            record_count = record.0 + 1; // enumerate is zero-indexed, so add 1 here to compensate
             match record.1 {
                 Ok(record) => {
                     match CDXJIndexRecord::new(&record, byte_counter, warc_file_path) {
@@ -94,7 +94,7 @@ pub fn index_file(warc_file_path: &Path) -> Result<Index, std::io::Error> {
                 }
             }
         }
-        println!("Total records: {record_count}");
+        println!("Indexed {record_count} records");
 
         return Index(CDXJIndex(cdxj_index), PageIndex(page_index));
     }
