@@ -7,7 +7,7 @@ const WARC_PATH: &str = "tests/rec-e7e68da067d0-20250423121042981-0.warc.gz";
 fn create_cdxj_index() -> Result<(), std::io::Error> {
     let warc_file_path: &Path = Path::new(WARC_PATH);
     let index = indexer::Index::index_file(warc_file_path)?;
-    let generated_cdxj_index = index.0.to_string();
+    let generated_cdxj_index = index.cdxj.to_string();
     let example_cdxj_index =
         fs::read_to_string(Path::new("tests/wacz_example/indexes/index.cdxj"))?;
     assert_eq!(generated_cdxj_index, example_cdxj_index);
@@ -18,7 +18,7 @@ fn create_cdxj_index() -> Result<(), std::io::Error> {
 fn create_pages_index() -> Result<(), std::io::Error> {
     let warc_file_path: &Path = Path::new(WARC_PATH);
     let index = indexer::Index::index_file(warc_file_path)?;
-    let generated_pages_index = index.1.to_string();
+    let generated_pages_index = index.pages.to_string();
     let example_pages_index =
         fs::read_to_string(Path::new("tests/wacz_example/pages/pages.jsonl"))?;
     assert_eq!(generated_pages_index, example_pages_index);

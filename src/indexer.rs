@@ -1,7 +1,6 @@
 //! Reads the WARC file and composes a CDX(J) index.
 
 use libflate::gzip::MultiDecoder;
-use serde::{Deserialize, Serialize};
 use std::ffi::OsStr;
 use std::fmt;
 use std::fs::File;
@@ -26,7 +25,12 @@ pub use record_url::RecordUrl;
 mod record_status;
 pub use record_status::RecordStatus;
 
-pub struct Index(pub CDXJIndex, pub PageIndex, pub NumberOfRecordsRead);
+#[derive(Debug)]
+pub struct Index {
+    pub cdxj: CDXJIndex,
+    pub pages: PageIndex,
+    pub records_read: NumberOfRecordsRead,
+}
 
 impl Index {
     /// # Indexer
@@ -101,11 +105,11 @@ impl Index {
                 }
             }
 
-            return Index(
-                CDXJIndex(cdxj_index),
-                PageIndex(page_index),
-                NumberOfRecordsRead(record_count),
-            );
+            return Index {
+                cdxj: CDXJIndex(cdxj_index),
+                pages: PageIndex(page_index),
+                records_read: NumberOfRecordsRead(record_count),
+            };
         }
 
         if warc_file_path.extension() == Some(OsStr::new("gz")) {
@@ -121,6 +125,7 @@ impl Index {
         };
     }
 }
+#[derive(Debug)]
 pub struct NumberOfRecordsRead(usize);
 impl fmt::Display for NumberOfRecordsRead {
     fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
@@ -129,6 +134,7 @@ impl fmt::Display for NumberOfRecordsRead {
 }
 
 /// This index struct contains a list of individual [CDX(J) Records](CDXJIndexRecord).
+#[derive(Debug)]
 pub struct CDXJIndex(Vec<CDXJIndexRecord>);
 impl fmt::Display for CDXJIndex {
     fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
@@ -137,6 +143,7 @@ impl fmt::Display for CDXJIndex {
     }
 }
 
+#[derive(Debug)]
 pub struct PageIndex(Vec<PageRecord>);
 impl fmt::Display for PageIndex {
     fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
@@ -243,28 +250,5 @@ impl fmt::Display for CDXJIndexRecord {
             self.status,
             self.filename
         );
-    }
-}
-
-// This has not been properly implemented yet!
-#[doc(hidden)]
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PageTitle(String);
-
-impl PageTitle {
-    // pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
-    //     if let Some(record_digest) = record.header(WarcHeader::PayloadDigest) {
-    //         return Ok(Self(record_digest.to_string()));
-    //     } else {
-    //         return Err(IndexingError::ValueNotFound(format!(
-    //             "Record {} does not have a payload digest in the WARC header",
-    //             record.warc_id()
-    //         )));
-    //     }
-    // }
-}
-impl fmt::Display for PageTitle {
-    fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
-        return write!(message, "{}", self.0);
     }
 }

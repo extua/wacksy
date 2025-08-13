@@ -1,6 +1,5 @@
 use crate::indexer::{
-    PageTitle, RecordContentType, RecordStatus, RecordTimestamp, RecordUrl,
-    indexing_errors::IndexingError,
+    RecordContentType, RecordStatus, RecordTimestamp, RecordUrl, indexing_errors::IndexingError,
 };
 use serde::Serialize;
 use std::fmt;
@@ -13,9 +12,6 @@ pub struct PageRecord {
     pub timestamp: RecordTimestamp,
     /// The URL that was archived
     pub url: RecordUrl,
-    /// A string describing the resource
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub title: Option<PageTitle>,
 }
 impl PageRecord {
     /// # Create page record
@@ -53,11 +49,7 @@ impl PageRecord {
                 .contains(&mime.to_string().as_str())
             && status == RecordStatus(200)
         {
-            let parsed_record = Self {
-                timestamp,
-                url,
-                title: None,
-            };
+            let parsed_record = Self { timestamp, url };
             return Ok(parsed_record);
         } else {
             // if the record is not one of the types we want,
