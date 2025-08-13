@@ -31,7 +31,7 @@ use chrono::Local;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use sha2::{Digest as _, Sha256};
-use std::{error::Error, fmt, path::Path};
+use std::{error::Error, ffi::OsStr, fmt, fs, path::Path};
 
 use crate::{WACZ_VERSION, indexer::Index};
 
@@ -47,12 +47,14 @@ pub struct DataPackage {
 
 /// A datapackage resource is anything which needs
 /// to be defined in the datapackage.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct DataPackageResource {
-    pub name: String,
+    pub file_name: String,
     pub path: String,
     pub hash: String,
     pub bytes: usize,
+    #[serde(skip)]
+    pub content: Vec<u8>,
 }
 
 /// A digest of the datapackage file itself.
@@ -84,25 +86,30 @@ impl DataPackage {
     /// resource if there is anything wrong with the filename
     /// or path of a resource.
     pub fn new(
-        warc_file: &[u8],
+        warc_file_path: &Path,
         index: &Index,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'static>> {
         let mut data_package = Self::default();
 
-        // this _could_ be a loop, with more things
+        let warc_file_bytes = fs::read(warc_file_path).unwrap();
+
         // add warc file to datapackage
-        let path: &Path = Path::new("archive/data.warc");
-        let resource = DataPackageResource::new(path, warc_file)?;
+        let path: &Path = if warc_file_path.extension() == Some(OsStr::new("gz")) {
+            Path::new("archive/data.warc.gz")
+        } else {
+            Path::new("archive/data.warc")
+        };
+        let resource = DataPackageResource::new(path, &warc_file_bytes)?;
         Self::add_resource(&mut data_package, resource);
 
         // add cdxj file to datapackage
         let path: &Path = Path::new("indexes/index.cdxj");
-        let resource = DataPackageResource::new(path, &index.0.to_string().into_bytes())?;
+        let resource = DataPackageResource::new(path, &index.cdxj.to_string().into_bytes())?;
         Self::add_resource(&mut data_package, resource);
 
         // add pages file to datapackage
         let path: &Path = Path::new("pages/pages.jsonl");
-        let resource = DataPackageResource::new(path, &index.1.to_string().into_bytes())?;
+        let resource = DataPackageResource::new(path, &index.pages.to_string().into_bytes())?;
         Self::add_resource(&mut data_package, resource);
 
         return Ok(data_package);
@@ -123,11 +130,10 @@ impl DataPackage {
     ///
     /// Will return a `serde_json` error if there's any problem
     /// deserialising the data package to a vector.
-    pub fn digest(data_package: &Self) -> Result<DataPackageDigest, serde_json::Error> {
-        let data_package_file: Vec<u8> = serde_json::to_vec(&data_package)?;
+    pub fn digest(&self) -> Result<DataPackageDigest, serde_json::Error> {
         return Ok(DataPackageDigest {
             path: "datapackage.json".to_owned(),
-            hash: format!("sha256:{:x}", Sha256::digest(data_package_file)),
+            hash: format!("sha256:{:x}", Sha256::digest(serde_json::to_vec(&self)?)),
         });
     }
 }
@@ -169,10 +175,11 @@ impl DataPackageResource {
         };
 
         return Ok(Self {
-            name: file_name,
+            file_name,
             path,
             hash: format!("sha256:{:x}", Sha256::digest(file_bytes)),
             bytes: file_bytes.len(),
+            content: file_bytes.to_vec(),
         });
     }
 }

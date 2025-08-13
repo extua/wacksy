@@ -3,7 +3,14 @@
 
 pub mod datapackage;
 pub mod indexer;
-use rawzip::{CompressionMethod, Error, ZipArchiveWriter, ZipDataWriter};
+use std::path::Path;
+
+use rawzip::{CompressionMethod, ZipArchiveWriter, ZipDataWriter};
+
+use crate::{
+    datapackage::{DataPackage, DataPackageDigest},
+    indexer::{CDXJIndex, Index, PageIndex},
+};
 
 /// Set the WACZ version of the file being created,
 /// deprecated in WACZ 1.2.0.
@@ -11,55 +18,68 @@ pub const WACZ_VERSION: &str = "1.1.1";
 
 /// This struct contains various resources as
 /// byte arrays, ready to be zipped.
-pub struct Wacz {
-    pub warc_file: Vec<u8>,
-    pub data_package_bytes: Vec<u8>,
-    pub data_package_digest_bytes: Vec<u8>,
-    pub cdxj_index_bytes: Vec<u8>,
-    pub pages_index_bytes: Vec<u8>,
+pub struct WACZ {
+    pub datapackage: DataPackage,
+    pub datapackage_digest: DataPackageDigest,
+    pub cdxj_index: CDXJIndex,
+    pub pages_index: PageIndex,
 }
-impl Wacz {
-    fn add_file_to_archive(
-        archive: &mut ZipArchiveWriter<&mut Vec<u8>>,
-        compression_method: CompressionMethod,
-        file_data: &[u8],
-        file_path: &str,
-    ) {
-        // Start a new file in our zip archive.
-        let mut file = archive
-            .new_file(file_path)
-            .compression_method(compression_method)
-            .create()
-            .unwrap();
+impl WACZ {
+    #[must_use]
+    pub fn from_file(warc_file_path: &Path) -> Self {
+        let index = Index::index_file(warc_file_path).unwrap();
+        let datapackage = DataPackage::new(warc_file_path, &index).unwrap();
+        let datapackage_digest = datapackage.digest().unwrap();
 
-        // Wrap the file in a ZipDataWriter, which will track information for the
-        // Zip data descriptor (like uncompressed size and crc).
-        let mut writer = ZipDataWriter::new(&mut file);
-
-        // Copy the data to the writer.
-        std::io::copy(&mut &*file_data, &mut writer).unwrap();
-
-        // Finish the file, which will return the finalized data descriptor
-        let (_, descriptor) = writer.finish().unwrap();
-
-        let uncompressed_size = descriptor.uncompressed_size();
-
-        println!("wrote {uncompressed_size} bytes to {file_path}");
-
-        // Write out the data descriptor and return the number of bytes the data compressed to.
-        file.finish(descriptor).unwrap();
+        return Self {
+            datapackage,
+            datapackage_digest,
+            cdxj_index: index.cdxj,
+            pages_index: index.pages,
+        };
     }
 
     /// # Zipper
     ///
-    /// This function should accept a... struct, with a warc file,
-    /// which is a stream of bytes, and some other things, also streams of bytes.
+    /// This function should accept a WACZ struct.
+    /// explain what else
     ///
     /// # Errors
     ///
     /// Will return a rawzip error if anything goes wrong with adding files
     /// files to the archive.
-    pub fn zip_dir(wacz_object: &Self) -> Result<Vec<u8>, Error> {
+    pub fn zip(&self) -> Result<Vec<u8>, rawzip::Error> {
+        fn add_file_to_archive(
+            archive: &mut ZipArchiveWriter<&mut Vec<u8>>,
+            compression_method: CompressionMethod,
+            file_data: &[u8],
+            file_path: &str,
+        ) {
+            // Start a new file in our zip archive.
+            let mut file = archive
+                .new_file(file_path)
+                .compression_method(compression_method)
+                .create()
+                .unwrap();
+
+            // Wrap the file in a ZipDataWriter, which will track information for the
+            // Zip data descriptor (like uncompressed size and crc).
+            let mut writer = ZipDataWriter::new(&mut file);
+
+            // Copy the data to the writer.
+            std::io::copy(&mut &*file_data, &mut writer).unwrap();
+
+            // Finish the file, which will return the finalized data descriptor
+            let (_, descriptor) = writer.finish().unwrap();
+
+            let uncompressed_size = descriptor.uncompressed_size();
+
+            println!("wrote {uncompressed_size} bytes to {file_path}");
+
+            // Write out the data descriptor and return the number of bytes the data compressed to.
+            file.finish(descriptor).unwrap();
+        }
+
         // Create a new Zip archive in memory.
         let mut output = Vec::new();
         let mut archive = ZipArchiveWriter::new(&mut output);
@@ -67,40 +87,30 @@ impl Wacz {
         // Set compression method to Store (no compression).
         let compression_method = CompressionMethod::Store;
 
-        // this should be an iterator?
-        // iterate over everything listed in the datapackage!
-        // and add it recursively
-        // and *then*, add the datapackage digest at the end
-        Self::add_file_to_archive(
+        // iterate over every resource in the datapackage
+        for datapackage_resource in &self.datapackage.resources {
+            add_file_to_archive(
+                &mut archive,
+                compression_method,
+                &datapackage_resource.content,
+                &datapackage_resource.path,
+            );
+        }
+
+        // add datapackage file
+        add_file_to_archive(
             &mut archive,
             compression_method,
-            &wacz_object.warc_file,
-            // at this point if the file is gzipped, the file should be 'data.gz'
-            "archive/data.warc",
-        );
-        Self::add_file_to_archive(
-            &mut archive,
-            compression_method,
-            &wacz_object.data_package_bytes,
+            &serde_json::to_vec(&self.datapackage).unwrap(),
             "datapackage.json",
         );
-        Self::add_file_to_archive(
+
+        // add digest file
+        add_file_to_archive(
             &mut archive,
             compression_method,
-            &wacz_object.data_package_digest_bytes,
+            &serde_json::to_vec(&self.datapackage_digest).unwrap(),
             "datapackage-digest.json",
-        );
-        Self::add_file_to_archive(
-            &mut archive,
-            compression_method,
-            &wacz_object.cdxj_index_bytes,
-            "indexes/index.cdxj",
-        );
-        Self::add_file_to_archive(
-            &mut archive,
-            compression_method,
-            &wacz_object.pages_index_bytes,
-            "pages/pages.jsonl",
         );
 
         // Finish the archive, which will write the central directory.
