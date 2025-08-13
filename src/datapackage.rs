@@ -49,6 +49,7 @@ pub struct DataPackage {
 /// to be defined in the datapackage.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DataPackageResource {
+    #[serde(rename = "name")]
     pub file_name: String,
     pub path: String,
     pub hash: String,
