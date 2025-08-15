@@ -4,7 +4,7 @@
 ![Deps.rs Crate Dependencies (latest)](https://img.shields.io/deps-rs/wacksy/latest)
 ![Crates.io Total Downloads](https://img.shields.io/crates/d/wacksy)
 
-An experimental Rust library for ~~reading and~~ writing WACZ files.
+An experimental Rust library for ~~reading and~~ writing ᴡᴀᴄᴢ files.
 
 ## Install
 
@@ -16,7 +16,7 @@ cargo add wacksy
 
 ## Background
 
-A WACZ file is essentially [a zip file](https://bikeshed.vibber.net/@brooke/114240574949828718); according to [the example in the spec](https://specs.webrecorder.net/wacz/1.1.1/) it should contain:
+A ᴡᴀᴄᴢ file is essentially [a renamed zip file](https://chaos.social/@ki/111680421462204605); according to [the example in the spec](https://specs.webrecorder.net/wacz/1.1.1/) it should contain:
 
 ```
 archive
