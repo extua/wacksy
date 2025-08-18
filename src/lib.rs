@@ -8,7 +8,7 @@ use std::path::Path;
 use rawzip::{CompressionMethod, ZipArchiveWriter, ZipDataWriter};
 
 use crate::{
-    datapackage::{DataPackage, DataPackageDigest},
+    datapackage::{DataPackage, DataPackageDigest, DataPackageError},
     indexer::{CDXJIndex, Index, PageIndex},
 };
 
@@ -25,20 +25,18 @@ pub struct WACZ {
     pub pages_index: PageIndex,
 }
 impl WACZ {
-    #[must_use]
-    pub fn from_file(warc_file_path: &Path) -> Self {
+    pub fn from_file(warc_file_path: &Path) -> Result<Self, DataPackageError> {
         let index = Index::index_file(warc_file_path).unwrap();
-        let datapackage = DataPackage::new(warc_file_path, &index).unwrap();
-        let datapackage_digest = datapackage.digest().unwrap();
+        let datapackage = DataPackage::new(warc_file_path, &index)?;
+        let datapackage_digest = datapackage.digest()?;
 
-        return Self {
+        return Ok(Self {
             datapackage,
             datapackage_digest,
             cdxj_index: index.cdxj,
             pages_index: index.pages,
-        };
+        });
     }
-
     /// # Zipper
     ///
     /// This function should accept a WACZ struct.
