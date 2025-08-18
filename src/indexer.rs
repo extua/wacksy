@@ -1,12 +1,9 @@
 //! Reads the WARC file and composes a CDX(J) index.
 
-use libflate::gzip::MultiDecoder;
 use std::ffi::OsStr;
 use std::fmt;
-use std::fs::File;
-use std::io::BufReader;
 use std::path::Path;
-use warc::{BufferedBody, Record, RecordIter, RecordType, WarcReader};
+use warc::{BufferedBody, Record, RecordType, WarcReader};
 
 mod indexing_errors;
 pub use indexing_errors::IndexingError;
@@ -47,8 +44,10 @@ impl Index {
     pub fn index_file(warc_file_path: &Path) -> Result<Self, std::io::Error> {
         // this looping function accepts a generic type which
         // this allows us to pass in both gzipped and non-gzipped records
-        fn loop_over_records<T: Iterator<Item = Result<Record<BufferedBody>, warc::Error>>>(
-            file_records: T,
+        fn loop_over_records<
+            RecordIterator: Iterator<Item = Result<Record<BufferedBody>, warc::Error>>,
+        >(
+            file_records: RecordIterator,
             warc_file_path: &Path,
         ) -> Index {
             let mut record_count: usize = 0;
@@ -113,15 +112,15 @@ impl Index {
         }
 
         if warc_file_path.extension() == Some(OsStr::new("gz")) {
-            let file_gzip: WarcReader<BufReader<MultiDecoder<BufReader<File>>>> =
-                WarcReader::from_path_gzip(warc_file_path)?;
-            let file_records: RecordIter<BufReader<MultiDecoder<BufReader<File>>>> =
-                file_gzip.iter_records();
-            return Ok(loop_over_records(file_records, warc_file_path));
+            return Ok(loop_over_records(
+                WarcReader::from_path_gzip(warc_file_path)?.iter_records(),
+                warc_file_path,
+            ));
         } else {
-            let file_not_gzip: WarcReader<BufReader<File>> = WarcReader::from_path(warc_file_path)?;
-            let file_records: RecordIter<BufReader<File>> = file_not_gzip.iter_records();
-            return Ok(loop_over_records(file_records, warc_file_path));
+            return Ok(loop_over_records(
+                WarcReader::from_path(warc_file_path)?.iter_records(),
+                warc_file_path,
+            ));
         };
     }
 }
@@ -192,14 +191,6 @@ impl CDXJIndexRecord {
         byte_counter: u64,
         warc_file_path: &Path,
     ) -> Result<Self, IndexingError> {
-        let timestamp = RecordTimestamp::new(record)?;
-        let url = RecordUrl::new(record)?;
-        let digest = RecordDigest::new(record)?;
-        let searchable_url = url.as_searchable_string()?;
-        let mime = RecordContentType::new(record)?;
-        let status = RecordStatus::new(record)?;
-        let filename = WarcFilename::new(record, warc_file_path)?;
-
         // first check whether the record is either
         // a response, revisit, resource, or metadata
         if [
@@ -210,23 +201,25 @@ impl CDXJIndexRecord {
         ]
         .contains(record.warc_type())
         {
-            let parsed_record = Self {
-                timestamp,
+            let url = RecordUrl::new(record)?;
+            let searchable_url = url.as_searchable_string()?;
+            return Ok(Self {
+                timestamp: RecordTimestamp::new(record)?,
                 url,
                 searchable_url,
-                digest,
-                mime,
-                filename,
+                digest: RecordDigest::new(record)?,
+                mime: RecordContentType::new(record)?,
+                filename: WarcFilename::new(record, warc_file_path)?,
                 offset: byte_counter,
                 length: record.content_length(),
-                status,
-            };
-            return Ok(parsed_record);
+                status: RecordStatus::new(record)?,
+            });
         } else {
             // if the record is not one of the types we want,
             // return an error
-            let warc_type = record.warc_type().clone();
-            return Err(IndexingError::UnindexableRecordType(warc_type));
+            return Err(IndexingError::UnindexableRecordType(
+                record.warc_type().clone(),
+            ));
         }
     }
 }

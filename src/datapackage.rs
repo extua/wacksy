@@ -86,10 +86,7 @@ impl DataPackage {
     /// Will return a `DataPackageError` relating to any
     /// resource if there is anything wrong with the filename
     /// or path of a resource.
-    pub fn new(
-        warc_file_path: &Path,
-        index: &Index,
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'static>> {
+    pub fn new(warc_file_path: &Path, index: &Index) -> Result<Self, DataPackageError> {
         let mut data_package = Self::default();
 
         let warc_file_bytes = fs::read(warc_file_path).unwrap();
@@ -100,18 +97,24 @@ impl DataPackage {
         } else {
             Path::new("archive/data.warc")
         };
-        let resource = DataPackageResource::new(path, &warc_file_bytes)?;
-        Self::add_resource(&mut data_package, resource);
+        Self::add_resource(
+            &mut data_package,
+            DataPackageResource::new(path, &warc_file_bytes)?,
+        );
 
         // add cdxj file to datapackage
         let path: &Path = Path::new("indexes/index.cdxj");
-        let resource = DataPackageResource::new(path, &index.cdxj.to_string().into_bytes())?;
-        Self::add_resource(&mut data_package, resource);
+        Self::add_resource(
+            &mut data_package,
+            DataPackageResource::new(path, &index.cdxj.to_string().into_bytes())?,
+        );
 
         // add pages file to datapackage
         let path: &Path = Path::new("pages/pages.jsonl");
-        let resource = DataPackageResource::new(path, &index.pages.to_string().into_bytes())?;
-        Self::add_resource(&mut data_package, resource);
+        Self::add_resource(
+            &mut data_package,
+            DataPackageResource::new(path, &index.pages.to_string().into_bytes())?,
+        );
 
         return Ok(data_package);
     }
@@ -131,11 +134,18 @@ impl DataPackage {
     ///
     /// Will return a `serde_json` error if there's any problem
     /// deserialising the data package to a vector.
-    pub fn digest(&self) -> Result<DataPackageDigest, serde_json::Error> {
-        return Ok(DataPackageDigest {
-            path: "datapackage.json".to_owned(),
-            hash: format!("sha256:{:x}", Sha256::digest(serde_json::to_vec(&self)?)),
-        });
+    pub fn digest(&self) -> Result<DataPackageDigest, DataPackageError> {
+        match serde_json::to_vec(&self) {
+            Ok(datapackage_as_vec) => {
+                return Ok(DataPackageDigest {
+                    path: "datapackage.json".to_owned(),
+                    hash: format!("sha256:{:x}", Sha256::digest(datapackage_as_vec)),
+                });
+            }
+            Err(serde_error) => {
+                return Err(DataPackageError::Serialisation(serde_error));
+            }
+        }
     }
 }
 
@@ -156,7 +166,7 @@ impl DataPackageResource {
                 Some(file_name) => file_name.to_owned(),
                 None => {
                     return Err(DataPackageError::FileNameError(format!(
-                        "unable to convert {file_name:?} to string"
+                        "unable to convert {} to string", file_name.display()
                     )));
                 }
             },
@@ -189,6 +199,7 @@ impl DataPackageResource {
 pub enum DataPackageError {
     FileNameError(String),
     FilePathError(String),
+    Serialisation(serde_json::Error),
 }
 impl fmt::Display for DataPackageError {
     fn fmt(&self, message: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -199,12 +210,16 @@ impl fmt::Display for DataPackageError {
             Self::FilePathError(error_message) => {
                 return write!(message, "File path error: {error_message}");
             }
+            Self::Serialisation(error_message) => {
+                return write!(message, "Serialisation error: {error_message}");
+            }
         }
     }
 }
 impl Error for DataPackageError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            Self::Serialisation(parse_error) => return Some(parse_error),
             Self::FilePathError(_) | Self::FileNameError(_) => return None,
         }
     }
