@@ -22,7 +22,6 @@ pub use record_url::RecordUrl;
 mod record_status;
 pub use record_status::RecordStatus;
 
-#[derive(Debug)]
 pub struct Index {
     pub cdxj: CDXJIndex,
     pub pages: PageIndex,
@@ -41,7 +40,7 @@ impl Index {
     /// Will return a `std::io::Error` from
     /// `WarcReader::from_path`/`from_path_gzip`
     /// in case of any problem reading the Warc file.
-    pub fn index_file(warc_file_path: &Path) -> Result<Self, std::io::Error> {
+    pub fn index_file(warc_file_path: &Path) -> Result<Self, IndexingError> {
         // this looping function accepts a generic type which
         // this allows us to pass in both gzipped and non-gzipped records
         fn loop_over_records<
@@ -49,7 +48,7 @@ impl Index {
         >(
             file_records: RecordIterator,
             warc_file_path: &Path,
-        ) -> Index {
+        ) -> Result<Index, IndexingError> {
             let mut record_count: usize = 0;
             let mut byte_counter: u64 = 0;
             let mut cdxj_index: Vec<CDXJIndexRecord> = Vec::with_capacity(1024);
@@ -93,38 +92,44 @@ impl Index {
                         // increment the byte counter after processing the record
                         byte_counter = byte_counter.wrapping_add(record_length);
                     }
-                    Err(err) => {
-                        // Any error with the record here affects the offset counter,
-                        // so can't index the rest of the file.
-                        eprintln!(
-                            "Unable to index the remainder of the file. WARC header parsing error: {err}"
-                        );
-                        break;
+                    Err(warc_error) => {
+                        return Err(IndexingError::CriticalRecordError(
+                            warc_error,
+                            record_count,
+                            byte_counter,
+                        ));
                     }
                 }
             }
 
-            return Index {
+            return Ok(Index {
                 cdxj: CDXJIndex(cdxj_index),
                 pages: PageIndex(page_index),
                 records_read: NumberOfRecordsRead(record_count),
-            };
+            });
         }
 
         if warc_file_path.extension() == Some(OsStr::new("gz")) {
-            return Ok(loop_over_records(
-                WarcReader::from_path_gzip(warc_file_path)?.iter_records(),
-                warc_file_path,
-            ));
+            match WarcReader::from_path_gzip(warc_file_path) {
+                Ok(file_gzip) => {
+                    let file_records = file_gzip.iter_records();
+                    let index = loop_over_records(file_records, warc_file_path)?;
+                    return Ok(index);
+                }
+                Err(file_read_error) => return Err(IndexingError::WarcFileError(file_read_error)),
+            }
         } else {
-            return Ok(loop_over_records(
-                WarcReader::from_path(warc_file_path)?.iter_records(),
-                warc_file_path,
-            ));
-        };
+            match WarcReader::from_path(warc_file_path) {
+                Ok(file_not_gzip) => {
+                    let file_records = file_not_gzip.iter_records();
+                    let index = loop_over_records(file_records, warc_file_path)?;
+                    return Ok(index);
+                }
+                Err(file_read_error) => return Err(IndexingError::WarcFileError(file_read_error)),
+            }
+        }
     }
 }
-#[derive(Debug)]
 pub struct NumberOfRecordsRead(usize);
 impl fmt::Display for NumberOfRecordsRead {
     fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
@@ -133,7 +138,6 @@ impl fmt::Display for NumberOfRecordsRead {
 }
 
 /// This index struct contains a list of individual [CDX(J) Records](CDXJIndexRecord).
-#[derive(Debug)]
 pub struct CDXJIndex(Vec<CDXJIndexRecord>);
 impl fmt::Display for CDXJIndex {
     fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
@@ -142,7 +146,6 @@ impl fmt::Display for CDXJIndex {
     }
 }
 
-#[derive(Debug)]
 pub struct PageIndex(Vec<PageRecord>);
 impl fmt::Display for PageIndex {
     fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
@@ -153,7 +156,6 @@ impl fmt::Display for PageIndex {
 
 /// A record which would make up
 /// a line in a CDX(J) index.
-#[derive(Debug)]
 pub struct CDXJIndexRecord {
     /// The date and time when the web archive snapshot was created
     pub timestamp: RecordTimestamp,

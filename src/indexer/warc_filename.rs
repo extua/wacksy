@@ -3,7 +3,6 @@ use std::fmt;
 use std::path::Path;
 use warc::{BufferedBody, Record, WarcHeader};
 
-#[derive(Debug)]
 pub struct WarcFilename(String);
 
 impl WarcFilename {
@@ -55,11 +54,9 @@ mod tests {
     fn valid_filename() {
         let filename = "example.warc";
         let path = Path::new(filename);
-
         let mut headers = Record::<BufferedBody>::new();
         headers.set_header(WarcHeader::Filename, filename).unwrap();
         let record = headers.add_body("");
-
         let parsed_filename = WarcFilename::new(&record, path).unwrap().to_string();
 
         assert_eq!(parsed_filename, filename);
