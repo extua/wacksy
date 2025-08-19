@@ -2,7 +2,6 @@ use crate::indexer::indexing_errors::IndexingError;
 use std::fmt;
 use warc::{BufferedBody, Record, WarcHeader};
 
-#[derive(Debug)]
 pub struct RecordDigest(String);
 
 impl RecordDigest {

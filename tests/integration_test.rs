@@ -1,10 +1,10 @@
-use std::{fs, path::Path};
+use std::{error::Error, fs, path::Path};
 use wacksy::indexer;
 
 const WARC_PATH: &str = "tests/rec-e7e68da067d0-20250423121042981-0.warc.gz";
 
 #[test]
-fn create_cdxj_index() -> Result<(), std::io::Error> {
+fn create_cdxj_index() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let warc_file_path: &Path = Path::new(WARC_PATH);
     let index = indexer::Index::index_file(warc_file_path)?;
     let generated_cdxj_index = index.cdxj.to_string();
@@ -15,7 +15,7 @@ fn create_cdxj_index() -> Result<(), std::io::Error> {
 }
 
 #[test]
-fn create_pages_index() -> Result<(), std::io::Error> {
+fn create_pages_index() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let warc_file_path: &Path = Path::new(WARC_PATH);
     let index = indexer::Index::index_file(warc_file_path)?;
     let generated_pages_index = index.pages.to_string();

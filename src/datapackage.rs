@@ -7,7 +7,7 @@
 //!   "profile": "data-package",
 //!   "wacz_version": "1.1.1",
 //!   "created": "2025-05-16T11:03:03.499792020+01:00",
-//!   "software": "wacksy 0.0.1-beta",
+//!   "software": "wacksy 0.0.2",
 //!   "resources": [
 //!     {
 //!       "name": "data.warc",
@@ -89,7 +89,10 @@ impl DataPackage {
     pub fn new(warc_file_path: &Path, index: &Index) -> Result<Self, DataPackageError> {
         let mut data_package = Self::default();
 
-        let warc_file_bytes = fs::read(warc_file_path).unwrap();
+        let warc_file_bytes = match fs::read(warc_file_path) {
+            Ok(bytes) => bytes,
+            Err(error) => return Err(DataPackageError::FileReadError(error)),
+        };
 
         // add warc file to datapackage
         let path: &Path = if warc_file_path.extension() == Some(OsStr::new("gz")) {
@@ -122,7 +125,7 @@ impl DataPackage {
     /// Takes a `DataPackage` struct and pushes a resource to the
     /// 'resources' field.
     fn add_resource(data_package: &mut Self, resource: DataPackageResource) {
-        data_package.resources.push(resource);
+        return data_package.resources.push(resource);
     }
 
     /// # Digest datapackage
@@ -143,7 +146,7 @@ impl DataPackage {
                 });
             }
             Err(serde_error) => {
-                return Err(DataPackageError::Serialisation(serde_error));
+                return Err(DataPackageError::SerialisationError(serde_error));
             }
         }
     }
@@ -166,7 +169,8 @@ impl DataPackageResource {
                 Some(file_name) => file_name.to_owned(),
                 None => {
                     return Err(DataPackageError::FileNameError(format!(
-                        "unable to convert {} to string", file_name.display()
+                        "unable to convert {} to string",
+                        file_name.display()
                     )));
                 }
             },
@@ -199,7 +203,8 @@ impl DataPackageResource {
 pub enum DataPackageError {
     FileNameError(String),
     FilePathError(String),
-    Serialisation(serde_json::Error),
+    FileReadError(std::io::Error),
+    SerialisationError(serde_json::Error),
 }
 impl fmt::Display for DataPackageError {
     fn fmt(&self, message: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -210,7 +215,10 @@ impl fmt::Display for DataPackageError {
             Self::FilePathError(error_message) => {
                 return write!(message, "File path error: {error_message}");
             }
-            Self::Serialisation(error_message) => {
+            Self::FileReadError(error_message) => {
+                return write!(message, "Could not read WARC file: {error_message}");
+            }
+            Self::SerialisationError(error_message) => {
                 return write!(message, "Serialisation error: {error_message}");
             }
         }
@@ -219,7 +227,8 @@ impl fmt::Display for DataPackageError {
 impl Error for DataPackageError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::Serialisation(parse_error) => return Some(parse_error),
+            Self::SerialisationError(parse_error) => return Some(parse_error),
+            Self::FileReadError(read_error) => return Some(read_error),
             Self::FilePathError(_) | Self::FileNameError(_) => return None,
         }
     }

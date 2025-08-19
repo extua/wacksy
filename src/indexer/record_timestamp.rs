@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use warc::{BufferedBody, Record, WarcHeader};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct RecordTimestamp(DateTime<chrono::FixedOffset>);
 
 impl RecordTimestamp {
@@ -52,7 +52,6 @@ mod tests {
         let mut headers = Record::<BufferedBody>::new();
         headers.set_header(WarcHeader::Date, timestamp).unwrap();
         let record = headers.add_body("");
-
         let generated_timestamp = RecordTimestamp::new(&record).unwrap().to_string();
 
         assert_eq!(generated_timestamp, "20250806133728");

@@ -6,7 +6,7 @@ use std::fmt;
 use warc::{BufferedBody, Record, RecordType};
 
 /// A page which would make up a line in a pages.jsonl file.
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 pub struct PageRecord {
     /// The date and time when the web archive snapshot was created
     pub timestamp: RecordTimestamp,
@@ -31,8 +31,6 @@ impl PageRecord {
     /// a Warc `response`, `revisit`, or `resource`. Otherwise, returns
     /// corresponding errors for url, timestamp mime, or status fields.
     pub fn new(record: &Record<BufferedBody>) -> Result<Self, IndexingError> {
-        let timestamp = RecordTimestamp::new(record)?;
-        let url = RecordUrl::new(record)?;
         let mime = RecordContentType::new(record)?;
         let status = RecordStatus::new(record)?;
 
@@ -49,14 +47,17 @@ impl PageRecord {
                 .contains(&mime.to_string().as_str())
             && status == RecordStatus(200)
         {
-            let parsed_record = Self { timestamp, url };
-            return Ok(parsed_record);
+            return Ok(Self {
+                timestamp: RecordTimestamp::new(record)?,
+                url: RecordUrl::new(record)?,
+            });
         } else {
             // if the record is not one of the types we want,
             // return an error
-            let warc_type = record.warc_type().clone();
             // change this to a generic indexing error?
-            return Err(IndexingError::UnindexableRecordType(warc_type));
+            return Err(IndexingError::UnindexableRecordType(
+                record.warc_type().clone(),
+            ));
         }
     }
 }

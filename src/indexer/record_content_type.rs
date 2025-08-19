@@ -2,7 +2,6 @@ use crate::indexer::indexing_errors::IndexingError;
 use std::{fmt, str};
 use warc::{BufferedBody, Record, RecordType};
 
-#[derive(Debug)]
 pub struct RecordContentType(String);
 
 impl RecordContentType {

@@ -3,13 +3,13 @@
 
 pub mod datapackage;
 pub mod indexer;
-use std::path::Path;
+use std::{error::Error, fmt, path::Path};
 
 use rawzip::{CompressionMethod, ZipArchiveWriter, ZipDataWriter};
 
 use crate::{
     datapackage::{DataPackage, DataPackageDigest, DataPackageError},
-    indexer::{CDXJIndex, Index, PageIndex},
+    indexer::{CDXJIndex, Index, IndexingError, PageIndex},
 };
 
 /// Set the WACZ version of the file being created,
@@ -25,17 +25,29 @@ pub struct WACZ {
     pub pages_index: PageIndex,
 }
 impl WACZ {
-    pub fn from_file(warc_file_path: &Path) -> Result<Self, DataPackageError> {
-        let index = Index::index_file(warc_file_path).unwrap();
-        let datapackage = DataPackage::new(warc_file_path, &index)?;
-        let datapackage_digest = datapackage.digest()?;
+    pub fn from_file(warc_file_path: &Path) -> Result<Self, WaczError> {
+        match Index::index_file(warc_file_path) {
+            Ok(index) => {
+                let datapackage = match DataPackage::new(warc_file_path, &index) {
+                    Ok(datapackage) => datapackage,
+                    Err(datapackage_error) => {
+                        return Err(WaczError::DataPackageError(datapackage_error));
+                    }
+                };
+                let datapackage_digest = match datapackage.digest() {
+                    Ok(digest) => digest,
+                    Err(digest_error) => return Err(WaczError::DataPackageError(digest_error)),
+                };
 
-        return Ok(Self {
-            datapackage,
-            datapackage_digest,
-            cdxj_index: index.cdxj,
-            pages_index: index.pages,
-        });
+                return Ok(Self {
+                    datapackage,
+                    datapackage_digest,
+                    cdxj_index: index.cdxj,
+                    pages_index: index.pages,
+                });
+            }
+            Err(indexing_error) => return Err(WaczError::IndexingError(indexing_error)),
+        }
     }
     /// # Zipper
     ///
@@ -115,5 +127,31 @@ impl WACZ {
         archive.finish()?;
 
         return Ok(output);
+    }
+}
+
+#[derive(Debug)]
+pub enum WaczError {
+    IndexingError(IndexingError),
+    DataPackageError(DataPackageError),
+}
+impl fmt::Display for WaczError {
+    fn fmt(&self, message: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::IndexingError(error_message) => {
+                return write!(message, "Indexing error: {error_message}");
+            }
+            Self::DataPackageError(error_message) => {
+                return write!(message, "Error when creating datapackage: {error_message}");
+            }
+        }
+    }
+}
+impl Error for WaczError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::IndexingError(error) => return Some(error),
+            Self::DataPackageError(error) => return Some(error),
+        }
     }
 }

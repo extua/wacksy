@@ -2,7 +2,7 @@ use crate::indexer::indexing_errors::IndexingError;
 use std::fmt;
 use warc::{BufferedBody, Record};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(PartialEq, Eq)]
 pub struct RecordStatus(pub u16);
 
 impl RecordStatus {
@@ -53,7 +53,6 @@ mod tests {
         let status = "200";
         let body = format!("HTTP/1.1 {status}\n");
         let record = Record::<BufferedBody>::new().add_body(body);
-
         let generated_status = RecordStatus::new(&record).unwrap().to_string();
 
         assert_eq!(generated_status, status);

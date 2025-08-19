@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::fmt::{Display, Formatter, Result};
+use std::io;
 
 #[derive(Debug)]
 pub enum IndexingError {
@@ -17,6 +18,9 @@ pub enum IndexingError {
     ValueNotFound(String),
     /// this type of record can not be indexed
     UnindexableRecordType(warc::RecordType),
+    /// probkem
+    WarcFileError(io::Error),
+    CriticalRecordError(warc::Error, usize, u64),
 }
 impl Display for IndexingError {
     fn fmt(&self, message: &mut Formatter<'_>) -> Result {
@@ -55,6 +59,17 @@ impl Display for IndexingError {
                     warc_type.to_string()
                 );
             }
+            Self::WarcFileError(io_error) => {
+                return write!(message, "Could not read the WARC file: {io_error}");
+            }
+            Self::CriticalRecordError(warc_error, record_count, byte_counter) => {
+                return write!(
+                    message,
+                    "A critical problem occurred with record {record_count}. \
+                    Any error with the record here affects the offset counter at byte {byte_counter}, \
+                    so the rest of the file cannot be indexed: {warc_error}"
+                );
+            }
         }
     }
 }
@@ -63,6 +78,8 @@ impl Error for IndexingError {
         match self {
             Self::RecordTimestampError(parse_error) => return Some(parse_error),
             Self::RecordUrlError(parse_error) => return Some(parse_error),
+            Self::WarcFileError(io_error) => return Some(io_error),
+            Self::CriticalRecordError(warc_error, ..) => return Some(warc_error),
             Self::ValueNotFound(_)
             | Self::RecordStatusError(_)
             | Self::UnindexableRecordType(_)

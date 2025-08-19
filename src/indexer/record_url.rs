@@ -5,7 +5,7 @@ use surt_rs::generate_surt;
 use url::Url;
 use warc::{BufferedBody, Record, WarcHeader};
 
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 pub struct RecordUrl(Url);
 
 impl RecordUrl {
