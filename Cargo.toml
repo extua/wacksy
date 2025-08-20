@@ -2,7 +2,7 @@
 name = "wacksy"
 version = "0.0.2"
 edition = "2024"
-rust-version = "1.86"
+rust-version = "1.87"
 license = "MIT"
 repository = "https://github.com/bodleian/wacksy"
 description = "Experimental library for writing WACZ achives."
