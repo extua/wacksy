@@ -32,14 +32,15 @@ impl Index {
     /// # Indexer
     ///
     /// This function sets off looping through the
-    /// records to build the index and create the
-    /// pages.jsonl file.
+    /// records to build the CDXJ and Pages.jsonl file.
     ///
     /// # Errors
     ///
-    /// Will return a `std::io::Error` from
-    /// `WarcReader::from_path`/`from_path_gzip`
-    /// in case of any problem reading the Warc file.
+    /// Returns a [file io error](IndexingError::WarcFileError) from
+    /// `WarcReader::from_path`/`from_path_gzip` in case of any problem reading
+    /// the WARC file. An [unrecoverable error](IndexingError::CriticalRecordError)
+    /// when reading the WARC record will stop the indexer and propogate
+    /// all the way up to the top.
     pub fn index_file(warc_file_path: &Path) -> Result<Self, IndexingError> {
         // this looping function accepts a generic type which
         // this allows us to pass in both gzipped and non-gzipped records
@@ -137,7 +138,7 @@ impl fmt::Display for NumberOfRecordsRead {
     }
 }
 
-/// This index struct contains a list of individual [CDX(J) Records](CDXJIndexRecord).
+/// Contains a list of [CDX(J) records](CDXJIndexRecord).
 pub struct CDXJIndex(Vec<CDXJIndexRecord>);
 impl fmt::Display for CDXJIndex {
     fn fmt(&self, message: &mut fmt::Formatter) -> fmt::Result {
@@ -154,8 +155,7 @@ impl fmt::Display for PageIndex {
     }
 }
 
-/// A record which would make up
-/// a line in a CDX(J) index.
+/// A record which would make up a line in a [CDX(J) index](CDXJIndex).
 pub struct CDXJIndexRecord {
     /// The date and time when the web archive snapshot was created
     pub timestamp: RecordTimestamp,

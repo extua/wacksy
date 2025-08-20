@@ -13,11 +13,10 @@ use crate::{
 };
 
 /// Set the WACZ version of the file being created,
-/// deprecated in WACZ 1.2.0.
+/// deprecated in [WACZ 1.2.0](https://specs.webrecorder.net/wacz/1.2.0/#changes).
 pub const WACZ_VERSION: &str = "1.1.1";
 
-/// This struct contains various resources as
-/// byte arrays, ready to be zipped.
+/// A WACZ object
 pub struct WACZ {
     pub datapackage: DataPackage,
     pub datapackage_digest: DataPackageDigest,
@@ -25,6 +24,18 @@ pub struct WACZ {
     pub pages_index: PageIndex,
 }
 impl WACZ {
+    /// # Create WACZ from WARC file
+    ///
+    /// This is the main function of the library, it takes a path to a WARC file,
+    /// reads through it to produce CDXJ and page.json indexes. Everything is
+    /// wrapped into a [datapackage], and then wrapped _again_ into a [WACZ] struct.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`WaczError`], which can be caused by a problem in either the
+    /// [indexer](IndexingError) or the [datapackage](DataPackageError). As the
+    /// datapackage depends on the index being complete, any problem with the
+    /// indexer will return early without continuing.
     pub fn from_file(warc_file_path: &Path) -> Result<Self, WaczError> {
         match Index::index_file(warc_file_path) {
             Ok(index) => {
@@ -51,12 +62,12 @@ impl WACZ {
     }
     /// # Zipper
     ///
-    /// This function should accept a WACZ struct.
-    /// explain what else
+    /// Takes a WACZ struct and zips up every element into a zip file.
+    /// This function is mostly a wrapper around [rawzip](https://crates.io/crates/rawzip).
     ///
     /// # Errors
     ///
-    /// Will return a rawzip error if anything goes wrong with adding files
+    /// Returns a `rawzip` error if anything goes wrong with adding files
     /// files to the archive.
     pub fn zip(&self) -> Result<Vec<u8>, rawzip::Error> {
         fn add_file_to_archive(

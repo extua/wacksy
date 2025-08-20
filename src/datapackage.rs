@@ -1,6 +1,10 @@
-//! Types for defining a datapackage.json file.
+//! Structured definition of a datapackage.json file.
+//! According to [the spec](https://specs.webrecorder.net/wacz/1.1.1/#datapackage-json):
 //!
-//! The file should look something like this when complete:
+//! > The file **must** be present at the root of the WACZ which serves as the manifest for the web archive
+//! > and is compliant with the [FRICTIONLESS-DATA-PACKAGE](https://specs.frictionlessdata.io/data-package/) specification.
+//!
+//! The file should look something like this when serialised to json:
 //!
 //! ```json
 //! {
@@ -24,8 +28,6 @@
 //!   ]
 //! }
 //! ```
-//!
-//! [Link to spec](https://specs.webrecorder.net/wacz/1.1.1/#datapackage-json)
 
 use chrono::Local;
 use serde::{Deserialize, Serialize};
@@ -35,18 +37,22 @@ use std::{error::Error, ffi::OsStr, fmt, fs, path::Path};
 
 use crate::{WACZ_VERSION, indexer::Index};
 
-/// A [frictionless datapackage](https://specs.frictionlessdata.io/data-package/).
+/// The main datapackage struct.
 #[derive(Serialize, Deserialize)]
 pub struct DataPackage {
+    /// In WACZ 1.1.1 this value is `data-package`.
     pub profile: String,
+    /// See [`WACZ_VERSION`] constant.
     pub wacz_version: String,
+    /// WACZ creation date, this is set to local datetime in [RFC 3399 format](https://rfc3339.date/).
     pub created: String,
+    /// The name of the software used to create the WACZ file, in this case `wacksy 0.0.2`.
     pub software: String,
+    /// List of file names, paths, sizes and fixity for all files contained in the WACZ.
     pub resources: Vec<DataPackageResource>,
 }
 
-/// A datapackage resource is anything which needs
-/// to be defined in the datapackage.
+/// A resource listed in the datapackage.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DataPackageResource {
     #[serde(rename = "name")]
@@ -54,6 +60,8 @@ pub struct DataPackageResource {
     pub path: String,
     pub hash: String,
     pub bytes: usize,
+    /// The raw content of the resource in bytes,
+    /// not passed through to serde when serialising to json.
     #[serde(skip)]
     pub content: Vec<u8>,
 }
