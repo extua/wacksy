@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3](https://github.com/bodleian/wacksy/compare/v0.0.2...v0.0.3) - 2025-08-22
+
+### Added
+
+- add more error handling, and specifically in the indexer
+
+### Fixed
+
+- *(datapackage)* the file name has to be named just 'name'
+- *(indexer)* shift the record counter forward by 1, fixes #47
+
+### Other
+
+- document from_file implemented on WACZ
+- bump MSRV to use .display() in the indexer
+- bump MSRV and cargofile following release of Rust 1.89
+- from_file now returns a result with DataPackageError
+- initial work on making a simpler API
+- new link in readme
+- use new git checkout action
+- *(indexer)* wrap indexer in Index struct
+- *(indexer)* only attempt to create a page record if the cdxj indexing was successful
+- pass whole index into datapackage
+- update/add badges to readme
+- change repository link to https://github.com/bodleian/wacksy/
+
 ## [0.0.2](https://github.com/bodleian/wacksy/compare/v0.0.1...v0.0.2) - 2025-08-06
 
 This release involves some refactoring, different parts of the indexer are now in their own modules.
