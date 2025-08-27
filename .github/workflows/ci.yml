@@ -40,18 +40,13 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Generate WACZ from example
-        run: cargo run --locked --example create_wacz
+        run: cargo test --locked
 
       - name: Validate wacz file with unzip
-        run: unzip -t wacz_example.wacz
+        run: unzip -t tests/output.wacz
 
       - name: Setup py-wacz
         run: pip install wacz
 
       - name: Validate wacz file with py-wacz
-        run: wacz validate -f wacz_example.wacz
-
-      - name: Upload test WACZ
-        uses: actions/upload-artifact@v4
-        with:
-          path: "wacz_example.wacz"
+        run: wacz validate -f tests/output.wacz
