@@ -18,14 +18,14 @@ cargo add wacksy
 
 This library provides two main ᴀᴘɪ functions.
 `from_file()` takes a ᴡᴀʀᴄ file and returns a structured representation of a ᴡᴀᴄᴢ object.
-`zip()` takes a ᴡᴀᴄᴢ object and zips it up to a byte array.
+`zip()` takes a ᴡᴀᴄᴢ object and zips it up to a byte array using [rawzip](https://github.com/nickbabcock/rawzip).
 
 ```rust
 fn main() -> Result<(), Box<dyn Error>> {
-    let warc_file_path: &Path = Path::new("example.warc.gz"); // set path to your ᴡᴀʀᴄ file
+    let warc_file_path = Path::new("example.warc.gz"); // set path to your ᴡᴀʀᴄ file
     let wacz_object = WACZ::from_file(warc_file_path)?; // index the ᴡᴀʀᴄ and create a ᴡᴀᴄᴢ object
     let zipped_wacz: Vec<u8> = wacz_object.zip()?; // zip up the ᴡᴀᴄᴢ
-    fs::write("wacz_example.wacz", zipped_wacz)?; // write out to file
+    fs::write("example.wacz", zipped_wacz)?; // write out to file
     Ok(())
 }
 ```

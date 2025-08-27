@@ -1,5 +1,20 @@
 //! Reads WARC files and wraps them up into a WACZ archive.
-//! examples todo.
+//!
+//! ```
+//! # use std::error::Error;
+//! # use wacksy::WACZ;
+//! # fn main() -> Result<(), Box<dyn Error>> {
+//! let warc_file_path = std::path::Path::new("tests/example.warc.gz"); // set path to your ᴡᴀʀᴄ file
+//! let wacz_object = WACZ::from_file(warc_file_path)?; // index the ᴡᴀʀᴄ and create a ᴡᴀᴄᴢ object
+//! let zipped_wacz: Vec<u8> = wacz_object.zip()?; // zip up the ᴡᴀᴄᴢ
+//! std::fs::write("tests/output.wacz", zipped_wacz)?; // write out to file
+//! # Ok(())
+//! # }
+//! ```
+#![doc(
+    html_logo_url = "https://www.ox.ac.uk/sites/default/themes/custom/oxweb/images/oxweb-logo.gif",
+    html_favicon_url = "https://www.bodleian.ox.ac.uk/sites/default/files/styles/favicon-32x32/public/bodreader/site-favicon/bod-favicon.png"
+)]
 
 pub mod datapackage;
 pub mod indexer;

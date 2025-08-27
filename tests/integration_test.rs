@@ -1,7 +1,7 @@
 use std::{error::Error, fs, path::Path};
 use wacksy::indexer;
 
-const WARC_PATH: &str = "tests/rec-e7e68da067d0-20250423121042981-0.warc.gz";
+const WARC_PATH: &str = "tests/example.warc.gz";
 
 #[test]
 fn create_cdxj_index() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
