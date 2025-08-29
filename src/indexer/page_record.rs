@@ -9,7 +9,7 @@ use warc::{BufferedBody, Record, RecordType};
 #[derive(Serialize)]
 pub struct PageRecord {
     /// The date and time when the web archive snapshot was created
-    #[serde(rename = "ts")] 
+    #[serde(rename = "ts")]
     pub timestamp: RecordTimestamp,
     /// The URL that was archived
     pub url: RecordUrl,
