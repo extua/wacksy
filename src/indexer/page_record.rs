@@ -9,6 +9,7 @@ use warc::{BufferedBody, Record, RecordType};
 #[derive(Serialize)]
 pub struct PageRecord {
     /// The date and time when the web archive snapshot was created
+    #[serde(rename = "ts")] 
     pub timestamp: RecordTimestamp,
     /// The URL that was archived
     pub url: RecordUrl,
@@ -90,7 +91,7 @@ mod tests {
 
         let generated_page_record = PageRecord::new(&record).unwrap().to_string();
         let example_page_record =
-            format!("{{\"timestamp\":\"2025-08-06T13:37:28Z\",\"url\":\"{target_url}\"}}\n");
+            format!("{{\"ts\":\"2025-08-06T13:37:28Z\",\"url\":\"{target_url}\"}}\n");
 
         assert_eq!(generated_page_record, example_page_record);
     }
