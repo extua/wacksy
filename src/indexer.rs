@@ -296,9 +296,9 @@ fn read_header_block<R: BufRead>(reader: &mut R) -> Option<String> {
     let mut header_buffer = String::with_capacity(2048);
     let mut found_headers = false;
 
+    // Read line-by-line from the offset in a loop
+    // and stop when the reader sees two newlines.
     while !found_headers {
-        // Read line-by-line from the offset in a loop
-        // and stop when the reader two newlines.
         let bytes_read = reader.read_line(&mut header_buffer).unwrap();
 
         if bytes_read == 0 {
